@@ -1,0 +1,138 @@
+const vocabularyData = {
+  words: {
+    "all done": {
+      sign: "finished",
+      gif: "finish.gif",
+      usage: "Use when child finishes meals, activities, or diaper changes",
+      function: "Refusing/Completing",
+    },
+    want: {
+      sign: "want",
+      gif: "want.gif",
+      usage: "Use before offering choices. 'You WANT milk or water?'",
+      function: "Requesting",
+    },
+    more: {
+      sign: "more",
+      gif: "more.gif",
+      usage: "Use during meals, play, or any activity child enjoys",
+      function: "Requesting",
+    },
+    help: {
+      sign: "help",
+      gif: "help.gif",
+      usage: "Teach child to ask for assistance instead of getting frustrated",
+      function: "Requesting",
+    },
+    please: {
+      sign: "please",
+      gif: "please.gif",
+      usage: "Use with all requests to teach polite communication",
+      function: "Social",
+    },
+    "thank you": {
+      sign: "thankyou",
+      gif: "thankyou.gif",
+      usage: "Use after receiving anything to build gratitude habits",
+      function: "Social",
+    },
+    yes: {
+      sign: "yes",
+      gif: "yes.gif",
+      usage: "Teach for making choices and expressing agreement",
+      function: "Social",
+    },
+    no: {
+      sign: "no",
+      gif: "no.gif",
+      usage: "Essential for expressing refusal and setting boundaries",
+      function: "Refusing",
+    },
+    stop: {
+      sign: "stop",
+      gif: "stop.gif",
+      usage: "Critical for safety and ending unwanted activities",
+      function: "Refusing",
+    },
+    go: {
+      sign: "go",
+      gif: "go.gif",
+      usage: "Use for transitions and movement activities",
+      function: "Action",
+    },
+    eat: {
+      sign: "eat",
+      gif: "eat.gif",
+      usage: "Use at mealtimes and when child shows hunger signs",
+      function: "Requesting",
+    },
+    drink: {
+      sign: "drink",
+      gif: "drink.gif",
+      usage: "Use when offering liquids or child shows thirst",
+      function: "Requesting",
+    },
+    milk: {
+      sign: "milk",
+      gif: "milk.gif",
+      usage: "Specific drink request, very motivating for most toddlers",
+      function: "Requesting",
+    },
+    water: {
+      sign: "water",
+      gif: "water.gif",
+      usage: "Essential daily need, use throughout the day",
+      function: "Requesting",
+    },
+    mom: {
+      sign: "mom",
+      gif: "mom.gif",
+      usage: "First social sign, use when mom enters room",
+      function: "Social",
+    },
+    dad: {
+      sign: "dad",
+      gif: "dad.gif",
+      usage: "Important family sign, use when dad is present",
+      function: "Social",
+    },
+    up: {
+      sign: "up",
+      gif: "up.gif",
+      usage: "Use when child wants to be picked up or go upstairs",
+      function: "Requesting",
+    },
+    down: {
+      sign: "down",
+      gif: "down.gif",
+      usage: "Use when child wants to get down or go downstairs",
+      function: "Requesting",
+    },
+    bathroom: {
+      sign: "bathroom",
+      gif: "bathroom.gif",
+      usage: "Critical for potty training and avoiding accidents",
+      function: "Requesting",
+    },
+    hurt: {
+      sign: "hurt",
+      gif: "hurt.gif",
+      usage: "Important for expressing pain instead of just crying",
+      function: "Describing",
+    },
+    tired: {
+      sign: "tired",
+      gif: "tired.gif",
+      usage: "Use before naps and bedtime routines",
+      function: "Describing",
+    },
+    hungry: {
+      sign: "hungry",
+      gif: "hungry.gif",
+      usage: "Helps child communicate need before getting cranky",
+      function: "Describing",
+    },
+  },
+}
+
+export default vocabularyData
