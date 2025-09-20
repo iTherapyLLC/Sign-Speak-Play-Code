@@ -211,11 +211,14 @@ export default function SignSpeakAndPlay() {
     }
   }, [videoUrl, isMobile, error, selectedWord])
 
-  // useEffect(() => {
-  //   if (isMobile && videoUrl && selectedWord && !showVideoModal) {
-  //     setShowVideoModal(true)
-  //   }
-  // }, [videoUrl, selectedWord, isMobile, showVideoModal])
+  useEffect(() => {
+    // Pick the first word from the default grid or use "Want"
+    const loadWord = "Want"
+    // Small delay to ensure component is ready
+    setTimeout(() => {
+      generateSign(loadWord)
+    }, 500)
+  }, []) // Empty array = run once when page loads
 
   const fetchSignDescription = async (word: string) => {
     try {
