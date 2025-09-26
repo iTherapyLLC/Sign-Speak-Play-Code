@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { isInappropriate, suggestAlternative } from "@/app/lib/content-filter"
 
 const SYSTEM_PROMPT = `
 You are an SLP coach. In ≤150 words, give parent-friendly, *word-specific* guidance.
@@ -95,6 +96,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Word is required" }, { status: 400 })
     }
 
+    if (isInappropriate(normalized)) {
+      console.log("[v0] Blocked inappropriate word from analysis:", normalized)
+      return NextResponse.json(
+        {
+          error: "Content not appropriate for educational analysis",
+          suggestion: suggestAlternative(normalized),
+        },
+        { status: 400 },
+      )
+    }
+
     const analysis = await callGPT5(normalized)
 
     // Verify format
@@ -120,6 +132,16 @@ export async function POST(req: NextRequest) {
     // Fallback if GPT-4 fails
     const { word } = await req.json().catch(() => ({ word: "the word" }))
     const w = normalizeWord(String(word || "the word"))
+
+    if (isInappropriate(w)) {
+      return NextResponse.json(
+        {
+          error: "Content not appropriate for educational analysis",
+          suggestion: suggestAlternative(w),
+        },
+        { status: 400 },
+      )
+    }
 
     const wordAnalyses: Record<string, string> = {
       want: `FUNCTION: request — core word for expressing desires and needs.

@@ -91,20 +91,20 @@ async function analyzeWordFunction(word: string, apiKey: string | undefined, has
 async function generateContextualImage(
   word: string,
   communicationFunction: string,
-  apiKey: string | undefined,
-  hasValidApiKey: boolean,
+  fluxApiKey: string | undefined,
+  hasValidFluxKey: boolean,
 ): Promise<string | null> {
-  if (!hasValidApiKey || !apiKey) {
-    console.log("[v0] No OpenAI API key available, skipping image generation")
+  if (!hasValidFluxKey || !fluxApiKey) {
+    console.log("[v0] No Flux API key available, skipping image generation")
     return null
   }
 
   const contextPrompts = {
-    request: `Real family moment: Parent and child in lived-in kitchen. Parent holds desired snack, pausing expectantly while child reaches. Parent looks tired but patient - this is the 5th time today. Maybe dishes in sink, toys on counter. Child might be frustrated or having breakthrough moment. Natural teaching opportunity in real life.`,
-    refusal: `Authentic mealtime: Parent offering food to child who clearly doesn't want it. Child turning away, parent respecting boundary while holding alternative. Kitchen shows signs of real family life - not perfect, not messy, just lived-in. Parent teaching "${word}" with genuine patience despite exhaustion.`,
-    command: `Real daily struggle: Child trying to open stubborn container, getting frustrated. Parent nearby folding laundry or doing dishes, waiting for child to ask for help. Home environment shows real family life - comfortable but not staged. Teaching moment emerging from genuine need.`,
-    comment: `Natural shared attention: Parent and child looking at something interesting together - book with worn pages, toy that's been loved, or something outside window. Both genuinely engaged. Home setting shows real family life with authentic details.`,
-    question: `Choice-making moment: Parent holding two realistic options, child considering. Maybe it's snack time and parent is tired, or getting dressed and running late. Real family dynamics - not perfect patience, but genuine care. Teaching questioning in authentic context.`,
+    request: `Professional photography of happy parent and smiling 4-year-old child in bright modern home, child pointing enthusiastically at desired item, parent holding it with warm smile, both making joyful eye contact, teaching moment for requesting "${word}", soft natural lighting, educational scene, 4K quality, hyperrealistic`,
+    refusal: `Candid photo of cheerful parent offering colorful toy to happy 5-year-old child who is gently pushing it away with a big smile, both laughing together, positive boundary setting teaching "${word}", bright daylight through windows, warm family moment, photorealistic`,
+    command: `Dynamic photo of joyful parent demonstrating action while excited child copies movement, both with huge smiles and engaged expressions, teaching "${word}" through active play, colorful playroom, professional lighting, hyperrealistic`,
+    comment: `Beautiful scene of parent and 4-year-old child sitting together looking at picture book, both pointing and smiling at same page, shared attention moment teaching "${word}", cozy reading corner, golden hour lighting, high detail`,
+    question: `Engaging photo of curious 5-year-old child with raised hands in questioning gesture, parent kneeling at eye level with encouraging smile, teaching "${word}" through play, bright educational playroom, professional lighting`,
   }
 
   const prompt = contextPrompts[communicationFunction] || contextPrompts.request
@@ -114,46 +114,42 @@ async function generateContextualImage(
     console.log(
       `[v0] Generating image for word: ${word}, function: ${communicationFunction}, diversity: ${diversityGroup}`,
     )
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
+
+    const response = await fetch("https://fal.run/fal-ai/flux-pro", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Key ${fluxApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: `Educational illustration for parent teaching child to communicate "${word}". ${prompt} 
-        
-        Show a ${diversityGroup} in a natural home setting. Capture a genuine moment—perhaps the parent is tired but determined, the child might be frustrated or having a breakthrough.
-        
-        ${CULTURAL_REPRESENTATION_PRINCIPLES}
-        
-        Style: Warm, realistic illustration. Focus on universal human connection, not cultural showcase. This is about the challenge every parent faces: helping their child communicate when words don't come easily.
-        
-        CRITICAL REQUIREMENTS:
-        - All text in images must be in English only
-        - Show authentic, lived-in environments (not perfect homes)
-        - Display genuine emotions and real family dynamics
-        - Focus on the universal teaching moment
-        - No text except English speech bubbles when absolutely necessary`,
-        size: "1792x1024",
-        quality: "hd",
-        style: "natural",
-        n: 1,
+        prompt: `${prompt} Show a ${diversityGroup} in a natural home setting. ${CULTURAL_REPRESENTATION_PRINCIPLES}`,
+        image_size: "landscape_4_3",
+        num_inference_steps: 25,
+        guidance_scale: 3.5,
+        num_images: 1,
+        safety_tolerance: 2,
       }),
     })
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const imageUrl = data.data[0]?.url
-    if (imageUrl) {
-      console.log(`[v0] Image generated successfully for: ${word} with ${diversityGroup}`)
-      return imageUrl
+    if (response.ok) {
+      const responseText = await response.text()
+      try {
+        const data = JSON.parse(responseText)
+        const imageUrl = data.images?.[0]?.url
+        if (imageUrl) {
+          console.log(`[v0] Image generated successfully for: ${word} with ${diversityGroup}`)
+          return imageUrl
+        } else {
+          console.warn(`[v0] No image URL returned for: ${word}`)
+          return null
+        }
+      } catch (jsonError) {
+        console.error("[v0] Flux API JSON parsing error:", jsonError)
+        return null
+      }
     } else {
-      console.warn(`[v0] No image URL returned for: ${word}`)
+      const errorText = await response.text()
+      console.error(`[v0] Flux API error: ${response.status} - ${errorText}`)
       return null
     }
   } catch (error) {
@@ -168,14 +164,17 @@ export async function POST(req: NextRequest) {
   try {
     console.log("[v0] Teaching comic API called")
 
-    const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAIAPIKEY
-    const hasValidApiKey = apiKey && apiKey !== "dummy-key" && apiKey.length > 10
+    const fluxApiKey = process.env.FLUX_API_KEY
+    const hasValidFluxKey = fluxApiKey && fluxApiKey !== "dummy-key" && fluxApiKey.length > 10
 
-    if (hasValidApiKey) {
-      console.log("[v0] Valid OpenAI API key found")
+    if (hasValidFluxKey) {
+      console.log("[v0] Valid Flux API key found")
     } else {
-      console.warn("[v0] No valid OpenAI API key found - using fallback mode only")
+      console.warn("[v0] No valid Flux API key found - using fallback mode only")
     }
+
+    const openaiApiKey = process.env.OPENAI_API_KEY || process.env.OPENAIAPIKEY
+    const hasValidOpenAIKey = openaiApiKey && openaiApiKey !== "dummy-key" && openaiApiKey.length > 10
 
     try {
       const body = await req.json()
@@ -214,14 +213,14 @@ export async function POST(req: NextRequest) {
     let imageUrl: string | null = null
 
     try {
-      communicationFunction = await analyzeWordFunction(word, apiKey, hasValidApiKey)
+      communicationFunction = await analyzeWordFunction(word, openaiApiKey, hasValidOpenAIKey)
     } catch (error) {
       console.error("[v0] Failed to analyze word function:", error)
       communicationFunction = "request"
     }
 
     try {
-      imageUrl = await generateContextualImage(word, communicationFunction, apiKey, hasValidApiKey)
+      imageUrl = await generateContextualImage(word, communicationFunction, fluxApiKey, hasValidFluxKey)
     } catch (error) {
       console.error("[v0] Failed to generate contextual image:", error)
       imageUrl = null
@@ -286,7 +285,7 @@ AVOID: ${strategy.avoid}`
       communicationFunction,
       aiGenerated: !!imageUrl,
       fallback: !imageUrl,
-      model: imageUrl ? "dall-e-3" : "fallback",
+      model: imageUrl ? "flux-pro" : "fallback",
     }
 
     console.log(`[v0] Returning successful response for: ${word}`)

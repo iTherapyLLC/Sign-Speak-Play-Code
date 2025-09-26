@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { isInappropriate, suggestAlternative } from "@/app/lib/content-filter"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,11 @@ export async function POST(request: NextRequest) {
     if (!word) {
       console.log("[v0] No word in request body:", body)
       return NextResponse.json({ error: "Word is required" }, { status: 400 })
+    }
+
+    if (isInappropriate(word)) {
+      console.log("[v0] Blocked inappropriate word:", word)
+      return NextResponse.json({ error: suggestAlternative(word) }, { status: 400 })
     }
 
     const apiKey = process.env.SIGNSPEAKAPIKEY

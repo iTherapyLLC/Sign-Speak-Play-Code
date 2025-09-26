@@ -12,6 +12,7 @@ import { AnalyzingHeader } from "./anim/analyzing-header"
 import { TeachingComicStrip } from "./teaching-comic-strip"
 import { TeachingStepsComic } from "./teaching-steps-comic"
 import Box from "@mui/material/Box"
+import { isInappropriate, suggestAlternative } from "@/app/lib/content-filter"
 
 const DEFAULT_GRID = [
   { text: "I", color: "bg-blue-500 hover:bg-blue-600 text-white" },
@@ -69,27 +70,176 @@ const GuideImageSlot = ({ loading, imageUrl, word }: { loading: boolean; imageUr
       <div
         className="
           relative isolate overflow-hidden
-          w-full rounded-lg bg-gray-100
+          w-full rounded-lg bg-gradient-to-br from-blue-50 to-purple-50
           aspect-[4/3] min-h-[220px]
         "
       >
-        {/* Spinner (clipped inside slot) */}
         {loading && (
           <div className="absolute inset-0 grid place-items-center pointer-events-none z-10">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500 mx-auto mb-2"></div>
-              <p className="text-xs text-gray-600">Generating teaching scenario for "{word}"…</p>
+              {/* Animated Teaching Scene Preview */}
+              <div className="mb-6 relative">
+                <div className="w-32 h-32 mx-auto relative">
+                  {/* Parent figure (larger circle) */}
+                  <div className="absolute top-2 left-4">
+                    <div
+                      className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full animate-bounce shadow-lg"
+                      style={{ animationDelay: "0s", animationDuration: "2s" }}
+                    >
+                      {/* Parent's face */}
+                      <div className="absolute inset-2 bg-white rounded-full opacity-90">
+                        <div className="absolute top-1 left-1 w-1 h-1 bg-blue-600 rounded-full"></div>
+                        <div className="absolute top-1 right-1 w-1 h-1 bg-blue-600 rounded-full"></div>
+                        <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-0.5 bg-blue-600 rounded-full"></div>
+                      </div>
+                    </div>
+                    {/* Parent's hands (signing gesture) */}
+                    <div
+                      className="absolute -bottom-1 -left-1 w-4 h-4 bg-blue-300 rounded-full animate-pulse"
+                      style={{ animationDelay: "0.5s" }}
+                    ></div>
+                    <div
+                      className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-300 rounded-full animate-pulse"
+                      style={{ animationDelay: "0.7s" }}
+                    ></div>
+                  </div>
+
+                  {/* Child figure (smaller circle) */}
+                  <div className="absolute top-6 right-4">
+                    <div
+                      className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full animate-bounce shadow-lg"
+                      style={{ animationDelay: "0.3s", animationDuration: "2s" }}
+                    >
+                      {/* Child's face */}
+                      <div className="absolute inset-1 bg-white rounded-full opacity-90">
+                        <div className="absolute top-0.5 left-0.5 w-0.5 h-0.5 bg-purple-600 rounded-full"></div>
+                        <div className="absolute top-0.5 right-0.5 w-0.5 h-0.5 bg-purple-600 rounded-full"></div>
+                        <div className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-0.5 bg-purple-600 rounded-full"></div>
+                      </div>
+                    </div>
+                    {/* Child's hands (learning gesture) */}
+                    <div
+                      className="absolute -bottom-0.5 -left-0.5 w-2 h-2 bg-purple-300 rounded-full animate-pulse"
+                      style={{ animationDelay: "1s" }}
+                    ></div>
+                    <div
+                      className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-purple-300 rounded-full animate-pulse"
+                      style={{ animationDelay: "1.2s" }}
+                    ></div>
+                  </div>
+
+                  {/* Communication bubbles floating between them */}
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2">
+                    <div
+                      className="w-6 h-4 bg-gradient-to-r from-orange-300 to-yellow-300 rounded-full animate-ping shadow-md"
+                      style={{ animationDelay: "0.5s", animationDuration: "3s" }}
+                    >
+                      {/* Speech bubble tail */}
+                      <div className="absolute -bottom-1 left-2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-orange-300"></div>
+                    </div>
+                  </div>
+
+                  <div className="absolute top-4 right-8">
+                    <div
+                      className="w-4 h-3 bg-gradient-to-r from-green-300 to-teal-300 rounded-full animate-ping shadow-md"
+                      style={{ animationDelay: "1.5s", animationDuration: "3s" }}
+                    >
+                      {/* Response bubble tail */}
+                      <div className="absolute -bottom-0.5 right-1 w-0 h-0 border-l-1 border-r-1 border-t-1 border-transparent border-t-green-300"></div>
+                    </div>
+                  </div>
+
+                  {/* Sparkle effects around the scene */}
+                  <div
+                    className="absolute top-1 left-1 w-1 h-1 bg-yellow-400 rounded-full animate-ping"
+                    style={{ animationDelay: "2s" }}
+                  ></div>
+                  <div
+                    className="absolute top-3 right-1 w-1 h-1 bg-pink-400 rounded-full animate-ping"
+                    style={{ animationDelay: "2.5s" }}
+                  ></div>
+                  <div
+                    className="absolute bottom-2 left-2 w-1 h-1 bg-blue-400 rounded-full animate-ping"
+                    style={{ animationDelay: "3s" }}
+                  ></div>
+                  <div
+                    className="absolute bottom-1 right-3 w-1 h-1 bg-purple-400 rounded-full animate-ping"
+                    style={{ animationDelay: "3.5s" }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Enhanced progress indicator with gradient */}
+              <div className="w-40 h-2 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden shadow-inner">
+                <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full animate-pulse shadow-sm"></div>
+              </div>
+
+              {/* Dynamic text with better typography */}
+              <div className="space-y-2">
+                <p className="text-base font-bold text-gray-800 animate-pulse">Creating teaching scenario...</p>
+                <p className="text-sm text-gray-600 font-medium">Generating visual guide for "{word}"</p>
+
+                {/* Enhanced bouncing dots with different colors and sizes */}
+                <div className="flex justify-center items-center gap-2 mt-3">
+                  <div
+                    className="w-2 h-2 bg-blue-500 rounded-full animate-bounce shadow-sm"
+                    style={{ animationDelay: "0s", animationDuration: "1.4s" }}
+                  ></div>
+                  <div
+                    className="w-2.5 h-2.5 bg-purple-500 rounded-full animate-bounce shadow-sm"
+                    style={{ animationDelay: "0.2s", animationDuration: "1.4s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-pink-500 rounded-full animate-bounce shadow-sm"
+                    style={{ animationDelay: "0.4s", animationDuration: "1.4s" }}
+                  ></div>
+                  <div
+                    className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-bounce shadow-sm"
+                    style={{ animationDelay: "0.6s", animationDuration: "1.4s" }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Curated Teaching Scenario Badge */}
+        {loading && (
+          <div className="absolute top-4 left-4 z-20">
+            <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold animate-pulse shadow-lg">
+              Curated Teaching Scenario
             </div>
           </div>
         )}
 
         {/* Image (fills slot when ready) */}
         {!loading && imageUrl && (
-          <img
-            src={imageUrl || "/placeholder.svg"}
-            alt={`Teaching scenario for ${word}`}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <>
+            <div className="absolute top-4 left-4 z-20">
+              <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                Curated Teaching Scenario
+              </div>
+            </div>
+            <img
+              src={imageUrl || "/placeholder.svg"}
+              alt={`Teaching scenario for ${word}`}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </>
+        )}
+
+        {/* Fallback state when no image and not loading */}
+        {!loading && !imageUrl && (
+          <div className="absolute inset-0 grid place-items-center">
+            <div className="text-center text-gray-500">
+              <div className="w-12 h-12 mx-auto mb-2 opacity-50">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                </svg>
+              </div>
+              <p className="text-sm">Visual guide unavailable</p>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -123,7 +273,7 @@ const CompactDeleteButton = ({
       aria-label={`Remove ${label}`}
       className={`
         absolute ${pos} z-10
-        p-3 -m-3                   
+        p-3 -m-3
         rounded-full
         transition transform
         hover:scale-105 active:scale-95
@@ -135,7 +285,7 @@ const CompactDeleteButton = ({
       <span
         className="
           grid place-items-center
-          h-5 w-5                    
+          h-5 w-5
           rounded-full
           bg-red-500/90 text-white
           shadow-sm ring-1 ring-white/60
@@ -236,6 +386,14 @@ export default function SignSpeakAndPlay() {
   }
 
   const generateSign = async (word: string) => {
+    // Client-side filter as first defense
+    if (isInappropriate(word)) {
+      setError(suggestAlternative(word))
+      setSelectedWord("")
+      setVideoUrl("")
+      return
+    }
+
     const now = Date.now()
     const timeSinceLastRequest = now - lastRequestTime
     if (timeSinceLastRequest < 1000) {
@@ -441,15 +599,29 @@ export default function SignSpeakAndPlay() {
     }
   }
 
+  // Add content filtering to handleSearch
   const handleSearch = () => {
     if (customWord.trim()) {
+      // Check before processing
+      if (isInappropriate(customWord.trim())) {
+        setError(suggestAlternative(customWord.trim()))
+        setCustomWord("")
+        return
+      }
       generateSign(customWord.trim())
     }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleSearch()
+      if (customWord.trim()) {
+        if (isInappropriate(customWord.trim())) {
+          setError(suggestAlternative(customWord.trim()))
+          setCustomWord("")
+          return
+        }
+        generateSign(customWord.trim())
+      }
     }
   }
 
@@ -584,8 +756,10 @@ export default function SignSpeakAndPlay() {
               onLoadedMetadata={(e) => {
                 const video = e.target as HTMLVideoElement
                 video.playbackRate = playbackSpeed
+                // Added proper error handling for mobile video autoplay
                 video.play().catch((err) => {
-                  console.log("Video autoplay failed:", err)
+                  console.log("[v0] Mobile video autoplay blocked:", err.message)
+                  // Don't show error for autoplay failures - this is expected browser behavior
                 })
               }}
               onError={(e) => {
@@ -896,7 +1070,7 @@ export default function SignSpeakAndPlay() {
                 <h3 className="text-mobile-xl font-bold text-orange-600">{selectedWord}</h3>
                 <button
                   onClick={() => setShowDescription(!showDescription)}
-                  className="flex items-center gap-2 px-4 py-3 bg-blue-100 text-blue-700 
+                  className="flex items-center gap-2 px-4 py-3 bg-blue-100 text-blue-700
                            rounded-lg text-mobile-sm font-medium touch-optimized min-h-[44px]"
                 >
                   <FileText className="h-4 w-4" />
@@ -998,7 +1172,7 @@ export default function SignSpeakAndPlay() {
                 <Button
                   onClick={() =>
                     speakText(
-                      `Teaching strategy for ${selectedWord}. ${wordAnalysis[selectedWord?.toLowerCase?.()] || getPracticeSteps(selectedWord).join(". ")}`,
+                      `Teaching strategy for ${selectedWord}. ${wordAnalysis[selectedWord] || getPracticeSteps(selectedWord).join(". ")}`,
                     )
                   }
                   variant="outline"
@@ -1033,6 +1207,13 @@ export default function SignSpeakAndPlay() {
 
   return (
     <div className="h-screen bg-gray-50 p-4 flex flex-col">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
+        <p className="text-blue-800 text-center">
+          🌟 This educational tool is designed for teaching appropriate communication skills. Please use family-friendly
+          words only. 🌟
+        </p>
+      </div>
+
       <div className="flex-1 flex gap-4 min-h-0">
         <div className="w-96 flex-shrink-0 flex flex-col">
           <div className="mb-4 flex-shrink-0">
@@ -1211,13 +1392,16 @@ export default function SignSpeakAndPlay() {
                               console.log("[v0] Video metadata loaded")
                               const video = e.target as HTMLVideoElement
                               video.playbackRate = playbackSpeed
+                              // Added proper error handling for play() promise
                               video
                                 .play()
                                 .then(() => {
                                   console.log("[v0] Video playing successfully")
                                 })
                                 .catch((err) => {
-                                  console.error("[v0] Video play failed:", err)
+                                  console.log("[v0] Video autoplay blocked or failed:", err.message)
+                                  // Don't set error state for autoplay failures - this is normal browser behavior
+                                  // User can still click to play manually if needed
                                 })
                             }}
                             onError={(e) => {
@@ -1280,7 +1464,18 @@ export default function SignSpeakAndPlay() {
                     <Volume2 className="mr-2 h-4 w-4" />
                     {isPlayingAudio ? "Speaking..." : "Speak Word"}
                   </Button>
-                  <Button onClick={() => setShowStrategy(!showStrategy)} variant="outline" className="flex-1">
+                  <Button
+                    onClick={() => {
+                      if (!showStrategy) {
+                        setShowStrategy(true)
+                        generateVisualExample(selectedWord) // This was missing!
+                      } else {
+                        setShowStrategy(false)
+                      }
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                  >
                     <BookOpen className="mr-2 h-4 w-4" />
                     {showStrategy ? "Show Video" : "Teaching Guide"}
                   </Button>
