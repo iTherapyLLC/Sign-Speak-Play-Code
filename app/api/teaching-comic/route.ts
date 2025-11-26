@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { validateInput } from "@/lib/content-filter"
 
 const ETHNIC_GROUPS = [
   "Asian family",
@@ -42,72 +43,106 @@ function getDiversityRotation(word: string): string {
   return ETHNIC_GROUPS[index]
 }
 
-async function analyzeWordFunction(word: string, apiKey: string | undefined, hasValidApiKey: boolean): Promise<string> {
-  if (!hasValidApiKey || !apiKey) {
-    console.log("[v0] No OpenAI API key available, using fallback word analysis")
+function analyzeWordFunction(word: string): string {
+  const w = word.toLowerCase()
+
+  // Request words
+  if (["want", "more", "help", "eat", "drink", "play", "give", "open"].includes(w)) {
     return "request"
   }
 
-  try {
-    console.log(`[v0] Analyzing word function for: ${word}`)
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "Categorize the communication function of this word. Respond with ONLY one word: request, refusal, command, comment, or question.",
-          },
-          {
-            role: "user",
-            content: word,
-          },
-        ],
-        temperature: 0.3,
-        max_tokens: 10,
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const result = data.choices[0].message.content?.toLowerCase().trim() || "request"
-    console.log(`[v0] Word function analysis result: ${result}`)
-    return ["request", "refusal", "command", "comment", "question"].includes(result) ? result : "request"
-  } catch (error) {
-    console.error("[v0] Word function analysis failed:", error)
-    return "request"
+  // Refusal words
+  if (["no", "stop", "don't want", "all done", "finished"].includes(w)) {
+    return "refusal"
   }
+
+  // Command words
+  if (["go", "come", "sit", "stand", "wait", "look"].includes(w)) {
+    return "command"
+  }
+
+  // Comment words
+  if (["good", "bad", "hot", "cold", "big", "little", "yes", "like", "happy", "sad"].includes(w)) {
+    return "comment"
+  }
+
+  // Question words
+  if (["what", "where", "who", "why", "how"].includes(w)) {
+    return "question"
+  }
+
+  // Affection words
+  if (["i love you", "love", "love you", "hug", "kiss"].includes(w)) {
+    return "affection"
+  }
+
+  // Default to request
+  return "request"
 }
 
 async function generateContextualImage(
   word: string,
   communicationFunction: string,
-  fluxApiKey: string | undefined,
-  hasValidFluxKey: boolean,
+  apiKey: string | undefined,
+  hasValidApiKey: boolean,
 ): Promise<string | null> {
-  if (!hasValidFluxKey || !fluxApiKey) {
+  if (!hasValidApiKey || !apiKey) {
     console.log("[v0] No Flux API key available, skipping image generation")
     return null
   }
 
-  const contextPrompts = {
-    request: `Professional photography of happy parent and smiling 4-year-old child in bright modern home, child pointing enthusiastically at desired item, parent holding it with warm smile, both making joyful eye contact, teaching moment for requesting "${word}", soft natural lighting, educational scene, 4K quality, hyperrealistic`,
-    refusal: `Candid photo of cheerful parent offering colorful toy to happy 5-year-old child who is gently pushing it away with a big smile, both laughing together, positive boundary setting teaching "${word}", bright daylight through windows, warm family moment, photorealistic`,
-    command: `Dynamic photo of joyful parent demonstrating action while excited child copies movement, both with huge smiles and engaged expressions, teaching "${word}" through active play, colorful playroom, professional lighting, hyperrealistic`,
-    comment: `Beautiful scene of parent and 4-year-old child sitting together looking at picture book, both pointing and smiling at same page, shared attention moment teaching "${word}", cozy reading corner, golden hour lighting, high detail`,
-    question: `Engaging photo of curious 5-year-old child with raised hands in questioning gesture, parent kneeling at eye level with encouraging smile, teaching "${word}" through play, bright educational playroom, professional lighting`,
+  const contextPrompts: Record<string, (word: string) => string> = {
+    request: (
+      word: string,
+    ) => `Documentary photograph of a PARENT teaching a TODDLER (18-36 months old baby) to communicate "${word}". 
+Scene: Bright kitchen, parent kneeling at child's eye level, holding a desired item (snack or toy) just out of reach. 
+The TODDLER is reaching toward the item with eager expression. Parent has patient, encouraging smile.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler, not older child).
+Setting: Clean family home, natural daylight, educational teaching moment.`,
+
+    refusal: (
+      word: string,
+    ) => `Documentary photograph of a PARENT teaching a TODDLER (18-36 months old baby) to communicate "${word}".
+Scene: Kitchen table, parent offering food to seated toddler. TODDLER turning head away or pushing plate, showing refusal.
+Parent has understanding, respectful expression accepting child's boundary.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler, not older child).
+Setting: Clean family home, natural daylight, mealtime teaching moment.`,
+
+    command: (
+      word: string,
+    ) => `Documentary photograph of a PARENT teaching a TODDLER (18-36 months old baby) to communicate "${word}".
+Scene: Living room, toddler struggling with a container or toy, looking up at parent for help.
+Parent waiting patiently for child to communicate before assisting.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler, not older child).
+Setting: Clean family home, natural daylight, problem-solving teaching moment.`,
+
+    comment: (
+      word: string,
+    ) => `Documentary photograph of a PARENT teaching a TODDLER (18-36 months old baby) to communicate "${word}".
+Scene: Cozy reading nook, parent and toddler sitting together looking at a picture book or toy.
+Both showing shared attention and genuine engagement with the object.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler, not older child).
+Setting: Clean family home, natural daylight, bonding teaching moment.`,
+
+    question: (
+      word: string,
+    ) => `Documentary photograph of a PARENT teaching a TODDLER (18-36 months old baby) to communicate "${word}".
+Scene: Kitchen or playroom, parent holding two choices (snacks or toys) at toddler's eye level.
+TODDLER looking thoughtfully at the options, considering which to choose.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler, not older child).
+Setting: Clean family home, natural daylight, choice-making teaching moment.`,
+
+    affection: (
+      word: string,
+    ) => `Documentary photograph of a PARENT teaching a TODDLER (18-36 months old baby) to communicate "${word}".
+Scene: Living room, parent hugging or holding their small toddler child, both smiling warmly.
+Parent demonstrating love and affection in a nurturing, parental way with their baby.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler, not older child).
+Setting: Clean family home, natural daylight, loving parent-child bonding moment.`,
   }
 
-  const prompt = contextPrompts[communicationFunction] || contextPrompts.request
+  const promptGenerator = contextPrompts[communicationFunction] || contextPrompts.request
+  const basePrompt = promptGenerator(word)
   const diversityGroup = getDiversityRotation(word)
 
   try {
@@ -118,38 +153,54 @@ async function generateContextualImage(
     const response = await fetch("https://fal.run/fal-ai/flux-pro", {
       method: "POST",
       headers: {
-        Authorization: `Key ${fluxApiKey}`,
+        Authorization: `Key ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: `${prompt} Show a ${diversityGroup} in a natural home setting. ${CULTURAL_REPRESENTATION_PRINCIPLES}`,
-        image_size: "landscape_4_3",
-        num_inference_steps: 25,
-        guidance_scale: 3.5,
+        prompt: `${basePrompt}
+
+SUBJECT REQUIREMENTS (CRITICAL - DO NOT DEVIATE):
+- Exactly ONE adult parent (mother or father, age 25-40)
+- Exactly ONE toddler child (MUST be visibly 18-36 months old - a BABY/TODDLER, small child)
+- This is a PARENT teaching their TODDLER child to communicate
+- Show ${diversityGroup} with authentic, natural representation
+
+PHOTOGRAPHY STYLE:
+- Professional documentary/editorial photography
+- Natural window lighting, soft shadows
+- Clean, modern family home environment
+- Shot on 35mm lens, shallow depth of field
+- Warm, authentic emotional connection
+
+ABSOLUTE RESTRICTIONS (NEVER INCLUDE):
+- NO romantic or adult couple imagery
+- NO teenagers or older children (child MUST be a toddler/baby)
+- NO two adults together without a toddler
+- NO text, labels, or watermarks
+- NO inappropriate content of any kind
+- This is ONLY for teaching communication to TODDLERS`,
+        image_size: "landscape_16_9",
+        num_inference_steps: 28,
+        guidance_scale: 4.0,
         num_images: 1,
+        enable_safety_checker: true,
         safety_tolerance: 2,
       }),
     })
 
-    if (response.ok) {
-      const responseText = await response.text()
-      try {
-        const data = JSON.parse(responseText)
-        const imageUrl = data.images?.[0]?.url
-        if (imageUrl) {
-          console.log(`[v0] Image generated successfully for: ${word} with ${diversityGroup}`)
-          return imageUrl
-        } else {
-          console.warn(`[v0] No image URL returned for: ${word}`)
-          return null
-        }
-      } catch (jsonError) {
-        console.error("[v0] Flux API JSON parsing error:", jsonError)
-        return null
-      }
-    } else {
+    if (!response.ok) {
       const errorText = await response.text()
-      console.error(`[v0] Flux API error: ${response.status} - ${errorText}`)
+      console.error(`[v0] Flux API error: ${response.status}`, errorText)
+      throw new Error(`Flux API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const imageUrl = data.images?.[0]?.url
+    if (imageUrl) {
+      console.log(`[v0] Image generated successfully for: ${word} with ${diversityGroup}`)
+      return imageUrl
+    } else {
+      console.warn(`[v0] No image URL returned for: ${word}`)
       return null
     }
   } catch (error) {
@@ -164,17 +215,14 @@ export async function POST(req: NextRequest) {
   try {
     console.log("[v0] Teaching comic API called")
 
-    const fluxApiKey = process.env.FLUX_API_KEY
-    const hasValidFluxKey = fluxApiKey && fluxApiKey !== "dummy-key" && fluxApiKey.length > 10
+    const apiKey = process.env.FLUX_API_KEY
+    const hasValidApiKey = apiKey && apiKey !== "dummy-key" && apiKey.length > 10
 
-    if (hasValidFluxKey) {
+    if (hasValidApiKey) {
       console.log("[v0] Valid Flux API key found")
     } else {
       console.warn("[v0] No valid Flux API key found - using fallback mode only")
     }
-
-    const openaiApiKey = process.env.OPENAI_API_KEY || process.env.OPENAIAPIKEY
-    const hasValidOpenAIKey = openaiApiKey && openaiApiKey !== "dummy-key" && openaiApiKey.length > 10
 
     try {
       const body = await req.json()
@@ -207,26 +255,35 @@ export async function POST(req: NextRequest) {
     }
 
     word = word.trim()
+
+    const validation = validateInput(word)
+    if (!validation.valid) {
+      console.log("[v0] Content filter blocked word:", word)
+      return NextResponse.json(
+        {
+          error: validation.message || "Invalid input",
+          suggestions: validation.suggestions,
+          word: "communication",
+          fallback: true,
+        },
+        { status: 400 },
+      )
+    }
+
     console.log(`[v0] Processing word: ${word}`)
 
-    let communicationFunction = "request"
+    const communicationFunction = analyzeWordFunction(word)
+    console.log(`[v0] Word function: ${communicationFunction}`)
+
     let imageUrl: string | null = null
 
     try {
-      communicationFunction = await analyzeWordFunction(word, openaiApiKey, hasValidOpenAIKey)
-    } catch (error) {
-      console.error("[v0] Failed to analyze word function:", error)
-      communicationFunction = "request"
-    }
-
-    try {
-      imageUrl = await generateContextualImage(word, communicationFunction, fluxApiKey, hasValidFluxKey)
+      imageUrl = await generateContextualImage(word, communicationFunction, apiKey, hasValidApiKey)
     } catch (error) {
       console.error("[v0] Failed to generate contextual image:", error)
       imageUrl = null
     }
 
-    // Generate appropriate teaching strategy
     const strategies = {
       request: {
         contexts: ["Snack time", "Toy play", "Getting dressed"],
@@ -253,6 +310,11 @@ export async function POST(req: NextRequest) {
         tip: "Offer choices and wait for them to ask",
         avoid: "Answering for them too quickly",
       },
+      affection: {
+        contexts: ["Hugging time", "Kissing moments", "Comfort cuddles"],
+        tip: "Demonstrate love and affection in a nurturing way",
+        avoid: "Using inappropriate or overly romantic imagery",
+      },
     }
 
     const strategy = strategies[communicationFunction] || strategies.request
@@ -267,7 +329,9 @@ Essential for ${
             ? "directing others"
             : communicationFunction === "comment"
               ? "sharing observations"
-              : "seeking information"
+              : communicationFunction === "question"
+                ? "seeking information"
+                : "expressing love and affection"
     }
 
 CONTEXTS:

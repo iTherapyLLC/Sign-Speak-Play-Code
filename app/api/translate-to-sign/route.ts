@@ -9,60 +9,50 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedText = text.toLowerCase().trim()
-    const GIPHY_API_KEY = process.env.GIPHY_API_KEY
 
     // FIRST: Check hardcoded verified GIFs
     const VERIFIED_GIFS: Record<string, any> = {
       help: {
-        gifUrl: "https://media.giphy.com/media/l0MYQo0iDSTlnRifK/giphy.gif",
         instruction: "Flat hand on top of fist, lift up together",
         socialFunction: "Requesting",
         source: "Sign with Robert (Verified)",
       },
       more: {
-        gifUrl: "https://media.giphy.com/media/l0MYrIceNktY1mdzO/giphy.gif",
         instruction: "Fingertips of both hands tap together",
         socialFunction: "Requesting",
         source: "Sign with Robert (Verified)",
       },
       please: {
-        gifUrl: "https://media.giphy.com/media/3oz8xxZjw8HJxLcmD6/giphy.gif",
         instruction: "Rub flat hand in circles on chest",
         socialFunction: "Requesting",
         source: "Sign with Robert (Verified)",
       },
       eat: {
-        gifUrl: "https://media.giphy.com/media/l3vRhFBHY2JT5QIdq/giphy.gif",
         instruction: "Flat hand taps mouth like eating",
         socialFunction: "Daily needs",
         source: "Sign with Robert (Verified)",
       },
       drink: {
-        gifUrl: "https://media.giphy.com/media/l4JyRPtPMj6CksKf6/giphy.gif",
         instruction: "C-shape hand tilted to mouth",
         socialFunction: "Daily needs",
         source: "Sign with Robert (Verified)",
       },
       bathroom: {
-        gifUrl: "https://media.giphy.com/media/26DONjlzKa7fM9HUI/giphy.gif",
         instruction: "Make T with hand, shake side to side",
         socialFunction: "Daily needs",
         source: "Sign with Robert (Verified)",
       },
       yes: {
-        gifUrl: "https://media.giphy.com/media/l4Jz0THKhQLo61NBK/giphy.gif",
         instruction: "Fist nods up and down",
         socialFunction: "Accepting",
         source: "Sign with Robert (Verified)",
       },
       "thank you": {
-        gifUrl: "https://media.giphy.com/media/l0MYrlUnFtq25TQR2/giphy.gif",
         instruction: "Touch chin, move hand forward",
         socialFunction: "Social",
         source: "Sign with Robert (Verified)",
       },
       sorry: {
-        gifUrl: "https://media.giphy.com/media/3o7TKq0oNLk8ljH7vG/giphy.gif",
         instruction: "Fist circles on chest",
         socialFunction: "Social",
         source: "Sign with Robert (Verified)",
@@ -73,12 +63,11 @@ export async function POST(request: NextRequest) {
     if (VERIFIED_GIFS[normalizedText]) {
       const sign = VERIFIED_GIFS[normalizedText]
       return NextResponse.json({
-        gifUrl: sign.gifUrl,
         instruction: sign.instruction,
         word: normalizedText,
         displayWord: text,
         socialFunction: sign.socialFunction,
-        hasVideo: true,
+        hasVideo: false,
         verified: true,
         source: sign.source,
       })
@@ -96,95 +85,18 @@ export async function POST(request: NextRequest) {
       const mappedWord = variations[normalizedText]
       const sign = VERIFIED_GIFS[mappedWord]
       return NextResponse.json({
-        gifUrl: sign.gifUrl,
         instruction: sign.instruction,
         word: mappedWord,
         displayWord: text,
         originalWord: normalizedText,
         socialFunction: sign.socialFunction,
-        hasVideo: true,
+        hasVideo: false,
         verified: true,
         source: sign.source,
       })
     }
 
-    // SECOND: Try to find on GIPHY (for want, no, all done, stop, go, mad)
-    if (GIPHY_API_KEY) {
-      // Search specifically for Sign with Robert content
-      const searchQueries = [
-        `signwithrobert ${normalizedText}`,
-        `"sign with robert" ${normalizedText}`,
-        `sign language ${normalizedText} signwithrobert`,
-      ]
-
-      // Special handling for "mad" - search for "angry"
-      if (normalizedText === "mad") {
-        searchQueries.push(`signwithrobert angry`)
-        searchQueries.push(`"sign with robert" angry`)
-      }
-
-      for (const query of searchQueries) {
-        try {
-          const searchUrl = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=50&rating=g`
-          const response = await fetch(searchUrl)
-          const data = await response.json()
-
-          if (data.data && data.data.length > 0) {
-            // Filter for Sign with Robert content
-            for (const gif of data.data) {
-              const username = gif.username?.toLowerCase() || ""
-              const title = gif.title?.toLowerCase() || ""
-              const slug = gif.slug?.toLowerCase() || ""
-
-              // STRICT FILTER: Must be from Sign with Robert
-              const isSignWithRobert =
-                username === "signwithrobert" ||
-                username.includes("signwithrobert") ||
-                title.includes("sign with robert")
-
-              if (isSignWithRobert) {
-                // Check if it matches the word we're looking for
-                const isCorrectWord =
-                  title.includes(normalizedText) ||
-                  slug.includes(normalizedText) ||
-                  (normalizedText === "all done" && (title.includes("all done") || title.includes("finished"))) ||
-                  (normalizedText === "finished" && (title.includes("finished") || title.includes("all done"))) ||
-                  (normalizedText === "done" && (title.includes("done") || title.includes("finished"))) ||
-                  (normalizedText === "no" && title.includes("no")) ||
-                  (normalizedText === "want" && title.includes("want")) ||
-                  (normalizedText === "stop" && title.includes("stop")) ||
-                  (normalizedText === "go" && title.includes("go")) ||
-                  (normalizedText === "mad" && (title.includes("angry") || title.includes("mad")))
-
-                if (isCorrectWord) {
-                  // Verify it's not inappropriate
-                  const inappropriate = ["hate", "fuck", "shit", "kill", "die", "stupid"]
-                  const hasInappropriate = inappropriate.some((word) => title.includes(word))
-
-                  if (!hasInappropriate) {
-                    return NextResponse.json({
-                      gifUrl: gif.images.fixed_height.url,
-                      instruction: getInstruction(normalizedText),
-                      word: normalizedText,
-                      displayWord: text,
-                      title: gif.title,
-                      socialFunction: getSocialFunction(normalizedText),
-                      hasVideo: true,
-                      verified: true,
-                      source: "Sign with Robert (GIPHY)",
-                    })
-                  }
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error(`Search failed for: ${query}`, error)
-        }
-      }
-    }
-
-    // THIRD: Return instructions only for essential words
+    // Return instructions only for essential words
     const instruction = getInstruction(normalizedText)
     if (instruction) {
       return NextResponse.json({

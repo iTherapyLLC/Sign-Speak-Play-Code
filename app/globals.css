@@ -1,6 +1,118 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Updated color tokens to match warm, engaging design brief */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.556 0.019 256.848);
+  --card: oklch(0.985 0.016 85.872);
+  --card-foreground: oklch(0.556 0.019 256.848);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.556 0.019 256.848);
+  --primary: oklch(0.577 0.215 41.116);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.985 0.016 85.872);
+  --secondary-foreground: oklch(0.556 0.019 256.848);
+  --muted: oklch(0.985 0.016 85.872);
+  --muted-foreground: oklch(0.556 0.019 256.848);
+  --accent: oklch(0.646 0.222 41.116);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.556 0.019 256.848);
+  --input: oklch(1 0 0);
+  --ring: oklch(0.577 0.215 41.116);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.577 0.215 41.116);
+  --chart-3: oklch(0.985 0.016 85.872);
+  --chart-4: oklch(1 0 0);
+  --chart-5: oklch(0.556 0.019 256.848);
+  --radius: 0.75rem;
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.556 0.019 256.848);
+  --sidebar-primary: oklch(0.577 0.215 41.116);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.646 0.222 41.116);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.556 0.019 256.848);
+  --sidebar-ring: oklch(0.577 0.215 41.116);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
 
 @layer utilities {
   .text-balance {
@@ -11,27 +123,27 @@
   .text-mobile-xs {
     font-size: 0.75rem;
     line-height: 1.2;
-  } /* 12px */
+  }
   .text-mobile-sm {
     font-size: 0.875rem;
     line-height: 1.3;
-  } /* 14px */
+  }
   .text-mobile-base {
     font-size: 1rem;
     line-height: 1.4;
-  } /* 16px */
+  }
   .text-mobile-lg {
     font-size: 1.125rem;
     line-height: 1.4;
-  } /* 18px */
+  }
   .text-mobile-xl {
     font-size: 1.25rem;
     line-height: 1.3;
-  } /* 20px */
+  }
   .text-mobile-2xl {
     font-size: 1.5rem;
     line-height: 1.2;
-  } /* 24px */
+  }
 
   /* Improved touch target sizing for mobile */
   .btn-mobile-sm {
@@ -56,47 +168,43 @@
   /* Enhanced mobile spacing system */
   .gap-mobile-xs {
     gap: 0.5rem;
-  } /* 8px */
+  }
   .gap-mobile-sm {
     gap: 0.75rem;
-  } /* 12px */
+  }
   .gap-mobile-base {
     gap: 1rem;
-  } /* 16px */
+  }
   .gap-mobile-lg {
     gap: 1.5rem;
-  } /* 24px */
+  }
   .gap-mobile-xl {
     gap: 2rem;
-  } /* 32px */
+  }
 
   .p-mobile-sm {
     padding: 0.75rem;
-  } /* 12px */
+  }
   .p-mobile-base {
     padding: 1rem;
-  } /* 16px */
+  }
   .p-mobile-lg {
     padding: 1.5rem;
-  } /* 24px */
+  }
 
-  /* Adding safe area utilities for mobile viewport handling */
+  /* Safe area utilities for mobile viewport handling */
   .safe-area-pb {
     padding-bottom: env(safe-area-inset-bottom, 1rem);
   }
-
   .safe-area-pt {
     padding-top: env(safe-area-inset-top, 1rem);
   }
-
   .safe-area-pl {
     padding-left: env(safe-area-inset-left, 1rem);
   }
-
   .safe-area-pr {
     padding-right: env(safe-area-inset-right, 1rem);
   }
-
   .safe-area-p {
     padding-top: env(safe-area-inset-top, 1rem);
     padding-bottom: env(safe-area-inset-bottom, 1rem);
@@ -108,104 +216,51 @@
     min-height: 100vh;
     min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
-
   .h-screen-safe {
     height: 100vh;
     height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
-
   .pb-safe-32 {
     padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
   }
-
+  .pb-safe-24 {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+  .mb-safe-4 {
+    margin-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
   .bottom-safe {
     bottom: env(safe-area-inset-bottom, 0px);
   }
-}
 
-@layer base {
-  :root {
-    /* Updated color tokens to match warm, engaging design brief */
-    --background: 0 0% 100%;
-    --foreground: 220 9% 46%;
-    --card: 39 100% 97%;
-    --card-foreground: 220 9% 46%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 9% 46%;
-    --primary: 20 91% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 39 100% 97%;
-    --secondary-foreground: 220 9% 46%;
-    --muted: 39 100% 97%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 24 95% 53%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 346 87% 43%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 9% 46%;
-    --input: 0 0% 100%;
-    --ring: 20 91% 48%;
-    --chart-1: 24 95% 53%;
-    --chart-2: 20 91% 48%;
-    --chart-3: 39 100% 97%;
-    --chart-4: 0 0% 100%;
-    --chart-5: 220 9% 46%;
-    --radius: 0.75rem;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 9% 46%;
-    --sidebar-primary: 20 91% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 95% 53%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 9% 46%;
-    --sidebar-ring: 20 91% 48%;
+  /* Touch interaction styles */
+  .touch-optimized {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
   }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  .touch-optimized:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  /* Mobile scrolling */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
   }
 }
 
-/* Adding custom ASL loading animation keyframes */
+/* Custom ASL loading animation keyframes */
 @keyframes handSign {
   0%,
   100% {
@@ -256,7 +311,6 @@
   }
 }
 
-/* Adding nodeScale keyframe animation for network-based loading animation */
 @keyframes nodeScale {
   0%,
   100% {
@@ -269,7 +323,6 @@
   }
 }
 
-/* Adding float keyframe animation for mesmerizing loading particles */
 @keyframes float {
   0%,
   100% {
@@ -290,8 +343,6 @@
   }
 }
 
-/* Adding psychology-based loading animation keyframes for enhanced visual engagement */
-/* Keyframes for psychology-based ASL loading animation */
 @keyframes drift {
   0%,
   100% {
@@ -314,7 +365,6 @@
   }
 }
 
-/* Adding keyframes for multi-animation loader with geometric patterns */
 @keyframes gridPulse {
   0%,
   100% {
@@ -346,7 +396,6 @@
   }
 }
 
-/* Adding sparkle animation for motivational text */
 @keyframes sparkle {
   0%,
   100% {
@@ -385,20 +434,6 @@
   animation: sparkle 2s ease-in-out 0.5s;
 }
 
-.sparkle-text.animate {
-  animation: none;
-}
-
-.sparkle-text.animate::before,
-.sparkle-text.animate::after {
-  animation: sparkle 2s ease-in-out;
-}
-
-.sparkle-text.animate::after {
-  animation-delay: 0.5s;
-}
-
-/* Adding sophisticated title animations for Sign, Speak, and Play header */
 @keyframes titleGlow {
   0%,
   100% {
@@ -454,7 +489,6 @@
   transform: scale(1.1);
 }
 
-/* Adding sophisticated gradient animation for header title */
 @keyframes gradient {
   0%,
   100% {
@@ -474,7 +508,6 @@
   background-size: 300% 300%;
 }
 
-/* Adding cascade animation keyframes for header entrance effects */
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -495,7 +528,6 @@
   }
 }
 
-/* Adding gentlePulse keyframe animation for continuous subtle header animation */
 @keyframes gentlePulse {
   0%,
   100% {
@@ -508,7 +540,6 @@
   }
 }
 
-/* Adding visual generation animation keyframes for engaging picture creation wait animation */
 @keyframes brushStroke {
   0% {
     opacity: 0;
@@ -581,42 +612,4 @@
   60% {
     transform: translateY(-5px);
   }
-}
-
-/* Enhanced mobile-specific viewport and touch optimizations */
-@supports (padding: max(0px)) {
-  .safe-area-pb {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
-
-  .pb-safe-32 {
-    padding-bottom: max(8rem, calc(8rem + env(safe-area-inset-bottom)));
-  }
-
-  /* Additional mobile viewport fixes */
-  .pb-safe-24 {
-    padding-bottom: max(6rem, calc(6rem + env(safe-area-inset-bottom)));
-  }
-
-  .mb-safe-4 {
-    margin-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
-}
-
-/* Improved touch interaction styles */
-.touch-optimized {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-.touch-optimized:active {
-  transform: scale(0.98);
-  transition: transform 0.1s ease;
-}
-
-/* Better mobile scrolling */
-.mobile-scroll {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
 }

@@ -1,222 +1,222 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { isInappropriate } from "@/app/lib/content-filter"
+import { NextResponse } from "next/server"
+import { validateInput } from "@/lib/content-filter"
 
 const WORD_FUNCTIONS: Record<string, string> = {
-  // Requests
-  want: "request",
   more: "request",
+  want: "request",
   help: "request",
   please: "request",
-  eat: "request",
-  drink: "request",
-  play: "request",
-  go: "request",
-
-  // Refusals
-  no: "refusal",
   stop: "refusal",
-  "don't want": "refusal",
+  no: "refusal",
   "all done": "refusal",
-
-  // Commands/Directives
-  walk: "command",
-  break: "command",
-
-  // Comments/Observations
-  good: "comment",
+  "don't want": "refusal",
+  yes: "response",
+  go: "command",
+  come: "command",
+  look: "command",
+  what: "question",
+  where: "question",
   happy: "comment",
   sad: "comment",
-  this: "comment",
-  that: "comment",
-  mad: "comment",
-  sick: "comment",
-
-  // Social/Polite
-  "thank you": "social",
-  yes: "agreement",
-
-  // Questions
-  what: "question",
-  "don't know": "question",
-
-  // Personal
-  i: "personal",
-  you: "personal",
-  bathroom: "routine",
+  like: "comment",
+  "i love you": "affection",
+  love: "affection",
+  "love you": "affection",
+  hug: "affection",
+  kiss: "affection",
 }
 
-function getTeachingPrompt(word: string): string {
-  const wordLower = word.toLowerCase()
-  const wordFunction = WORD_FUNCTIONS[wordLower] || "communication"
-
-  // High-quality prompts optimized for FLUX Pro
-  const prompts: Record<string, string> = {
-    request: `Professional photography of happy parent and smiling 4-year-old child in bright modern home, child pointing enthusiastically at desired item, parent holding it with warm smile, both making joyful eye contact, teaching moment for requesting "${word}", soft natural lighting, educational scene, 4K quality, hyperrealistic`,
-
-    refusal: `Candid photo of cheerful parent offering colorful toy to happy 5-year-old child who is gently pushing it away with a big smile, both laughing together, positive boundary setting teaching "${word}", bright daylight through windows, warm family moment, photorealistic`,
-
-    command: `Dynamic photo of joyful parent demonstrating action while excited child copies movement, both with huge smiles and engaged expressions, teaching "${word}" through active play, colorful playroom, professional lighting, hyperrealistic`,
-
-    comment: `Beautiful scene of parent and 4-year-old child sitting together looking at picture book, both pointing and smiling at same page, shared attention moment teaching "${word}", cozy reading corner, golden hour lighting, high detail`,
-
-    question: `Engaging photo of curious 5-year-old child with raised hands in questioning gesture, parent kneeling at eye level with encouraging smile, teaching "${word}" through play, bright educational playroom, professional lighting`,
-
-    social: `Heartwarming moment of parent and 4-year-old child practicing polite interaction, both with genuine happy expressions, high-five gesture, teaching "${word}", warm home environment, natural lighting, photorealistic quality`,
-
-    agreement: `Joyful scene of parent and child both nodding with big smiles, thumbs up gestures, positive reinforcement moment teaching "${word}", bright cheerful living room, professional photography`,
-
-    personal: `Intimate photo of parent and child face to face, child pointing to self or parent with pride, both beaming with happiness during identity teaching for "${word}", warm educational moment, soft lighting`,
-
-    routine: `Calm scene of parent helping child with daily routine, both relaxed and happy, teaching "${word}" in natural bathroom or bedroom setting, soft morning light, photorealistic`,
-
-    communication: `Professional photo of happy parent and smiling 5-year-old child face to face on carpet, both using expressive hand gestures while communicating, teaching "${word}", bright living room, soft natural light, educational moment`,
-  }
-
-  return prompts[wordFunction] || prompts.communication
+const STOCK_IMAGE_FALLBACKS: Record<string, string> = {
+  like: "https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?w=800&q=80",
+  no: "https://images.unsplash.com/photo-1540479859555-17af45c78602?w=800&q=80",
+  stop: "https://images.unsplash.com/photo-1476703993599-0a1dd7228f2d?w=800&q=80",
+  more: "https://images.unsplash.com/photo-1504151932400-72d4384f04b3?w=800&q=80",
+  want: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=800&q=80",
+  help: "https://images.unsplash.com/photo-1491013516836-7db643ee125a?w=800&q=80",
+  yes: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
+  go: "https://images.unsplash.com/photo-1544717297-fa95b6ee9643?w=800&q=80",
+  happy: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
+  sad: "https://images.unsplash.com/photo-1541199249251-f713e6145474?w=800&q=80",
+  default: "https://images.unsplash.com/photo-1491013516836-7db643ee125a?w=800&q=80",
 }
 
-const FALLBACK_IMAGES: Record<string, string> = {
-  request: "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1200&q=80",
-  refusal: "https://images.unsplash.com/photo-1566665797739-1e64c2839d4c?w=1200&q=80",
-  command: "https://images.unsplash.com/photo-1569163139394-de4798aa62b6?w=1200&q=80",
-  comment: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1200&q=80",
-  question: "https://images.unsplash.com/photo-1593100126453-19b562a800c1?w=1200&q=80",
-  social: "https://images.unsplash.com/photo-1453749024858-4bca89bd9edc?w=1200&q=80",
-  agreement: "https://images.unsplash.com/photo-1471286174890-9c112ffca5b4?w=1200&q=80",
-  personal: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=1200&q=80",
-  routine: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=1200&q=80",
-  default: "https://images.unsplash.com/photo-1444069069008-83a57aac43ac?w=1200&q=80",
+const ETHNIC_GROUPS = [
+  "Asian family",
+  "Black family",
+  "White family",
+  "Latino family",
+  "Indigenous family",
+  "Pacific Islander family",
+]
+
+function getDiversityRotation(word: string): string {
+  const hash = word.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  const index = hash % ETHNIC_GROUPS.length
+  return ETHNIC_GROUPS[index]
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { word } = await req.json()
+    const { word } = await request.json()
 
-    if (!word) {
-      return NextResponse.json({ error: "Word is required" }, { status: 400 })
-    }
-
-    if (isInappropriate(word)) {
+    const validation = validateInput(word)
+    if (!validation.valid) {
+      console.log("[v0] Content filter blocked word:", word)
       return NextResponse.json(
         {
-          imageUrl: null,
-          error: "Please try another word. We focus on educational, family-friendly communication.",
+          error: validation.message || "Invalid input",
+          suggestions: validation.suggestions,
+          fallback: true,
         },
         { status: 400 },
       )
     }
 
-    const prompt = getTeachingPrompt(word)
-    const wordFunction = WORD_FUNCTIONS[word.toLowerCase()] || "communication"
+    const apiKey = process.env.FLUX_API_KEY
 
-    console.log(`[Visual] Generating enhanced Flux image for "${word}" with function: ${wordFunction}`)
-
-    try {
-      const fluxResponse = await fetch("https://fal.run/fal-ai/flux-pro", {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${process.env.FLUX_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          image_size: "landscape_4_3",
-          num_inference_steps: 25,
-          guidance_scale: 3.5,
-          num_images: 1,
-          safety_tolerance: 2,
-        }),
+    if (!apiKey) {
+      console.error("Flux API key not found")
+      const fallbackUrl = STOCK_IMAGE_FALLBACKS[word.toLowerCase()] || STOCK_IMAGE_FALLBACKS.default
+      return NextResponse.json({
+        imageUrl: fallbackUrl,
+        wordFunction: WORD_FUNCTIONS[word.toLowerCase()] || "request",
+        fallback: true,
+        fallbackReason: "API key not configured",
       })
-
-      if (fluxResponse.ok) {
-        const responseText = await fluxResponse.text()
-        console.log(`[Visual] Flux API response status: ${fluxResponse.status}`)
-
-        try {
-          const fluxData = JSON.parse(responseText)
-
-          if (fluxData.images && fluxData.images.length > 0) {
-            const imageUrl = fluxData.images[0].url
-            console.log(`[Visual] Successfully generated enhanced Flux Pro image for: ${word}`)
-
-            return NextResponse.json({
-              imageUrl,
-              wordFunction,
-              provider: "flux-pro",
-              model: "FLUX Pro",
-              prompt: prompt,
-              isParentChild: true,
-            })
-          }
-        } catch (jsonError) {
-          console.error(`[Visual] Flux API JSON parsing error:`, jsonError)
-          console.error(`[Visual] Raw response:`, responseText.substring(0, 200))
-        }
-      } else {
-        const errorText = await fluxResponse.text()
-        console.error(`[Visual] Flux Pro API error: ${fluxResponse.status} - ${errorText}`)
-
-        try {
-          const fallbackResponse = await fetch("https://fal.run/fal-ai/flux-schnell", {
-            method: "POST",
-            headers: {
-              Authorization: `Key ${process.env.FLUX_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              prompt: prompt,
-              image_size: "landscape_4_3",
-              num_inference_steps: 4,
-              guidance_scale: 7.5,
-              num_images: 1,
-            }),
-          })
-
-          if (fallbackResponse.ok) {
-            const fallbackText = await fallbackResponse.text()
-            try {
-              const fallbackData = JSON.parse(fallbackText)
-              if (fallbackData.images && fallbackData.images.length > 0) {
-                console.log(`[Visual] Using Flux Schnell fallback for: ${word}`)
-                return NextResponse.json({
-                  imageUrl: fallbackData.images[0].url,
-                  wordFunction,
-                  provider: "flux-schnell",
-                  model: "FLUX Schnell",
-                  isParentChild: true,
-                })
-              }
-            } catch (fallbackJsonError) {
-              console.error(`[Visual] Flux Schnell JSON parsing error:`, fallbackJsonError)
-            }
-          }
-        } catch (fallbackError) {
-          console.error(`[Visual] Flux Schnell fallback error:`, fallbackError)
-        }
-      }
-    } catch (fluxError) {
-      console.error("[Visual] Flux API error:", fluxError)
     }
 
-    const fallbackImage = FALLBACK_IMAGES[wordFunction] || FALLBACK_IMAGES.default
-    console.log(`[Visual] Using fallback image for "${word}" with function: ${wordFunction}`)
+    const wordFunction = WORD_FUNCTIONS[word.toLowerCase()] || "request"
+    const diversityGroup = getDiversityRotation(word)
+
+    const improvedPrompts: Record<string, string> = {
+      response: `Documentary photograph: PARENT teaching TODDLER (18-36 months old baby) to communicate "${word}".
+Parent kneeling at toddler's eye level, demonstrating the concept with clear gestures.
+Toddler watching attentively with curious expression.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
+Setting: Bright, clean family home, natural daylight.`,
+
+      request: `Documentary photograph: PARENT teaching TODDLER (18-36 months old baby) to request "${word}".
+Parent holding desired item just out of toddler's reach, waiting for communication attempt.
+Toddler reaching toward item with eager, wanting expression.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
+Setting: Bright kitchen, natural daylight, snack time scenario.`,
+
+      refusal: `Documentary photograph: PARENT teaching TODDLER (18-36 months old baby) to refuse "${word}".
+Parent offering item to toddler, toddler turning away or pushing item with clear "no" expression.
+Parent accepting refusal with understanding smile.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
+Setting: Kitchen table, mealtime, natural daylight.`,
+
+      command: `Documentary photograph: PARENT teaching TODDLER (18-36 months old baby) the command "${word}".
+Parent waiting patiently while toddler tries to communicate a need.
+Toddler looking up at parent for help with a task.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
+Setting: Living room, natural daylight, problem-solving moment.`,
+
+      question: `Documentary photograph: PARENT teaching TODDLER (18-36 months old baby) to ask "${word}".
+Parent holding two choices at toddler's eye level.
+Toddler looking thoughtfully at options, deciding which to choose.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
+Setting: Kitchen or playroom, natural daylight, choice-making moment.`,
+
+      comment: `Documentary photograph: PARENT teaching TODDLER (18-36 months old baby) to express "${word}".
+Parent and toddler sharing attention on an interesting object or book.
+Both showing genuine engagement and connection.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
+Setting: Cozy reading area, natural daylight, bonding moment.`,
+
+      affection: `Documentary photograph: PARENT expressing love to their TODDLER (18-36 months old baby).
+Parent hugging, holding, or cuddling their small toddler child.
+Both parent and toddler smiling warmly, showing loving parent-child bond.
+MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
+This is PARENTAL LOVE - a mother or father with their baby child.
+Setting: Cozy living room, natural daylight, nurturing family moment.`,
+    }
+
+    const basePrompt = improvedPrompts[wordFunction] || improvedPrompts["request"]
+
+    console.log(`[v0] Generating image for word: ${word} with function: ${wordFunction}, diversity: ${diversityGroup}`)
+
+    const response = await fetch("https://fal.run/fal-ai/flux-pro", {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: `${basePrompt}
+
+SUBJECT REQUIREMENTS (CRITICAL - DO NOT DEVIATE):
+- Exactly ONE adult parent (mother or father, age 25-40)
+- Exactly ONE toddler child (MUST be visibly 18-36 months old - a BABY/TODDLER, small child)
+- Show ${diversityGroup} with authentic, natural representation
+- This is a PARENT teaching their TODDLER child to communicate
+
+PHOTOGRAPHY STYLE:
+- Professional documentary/editorial photography
+- Natural window lighting, soft shadows
+- Clean, modern family home environment
+- Warm, authentic emotional connection
+
+ABSOLUTE RESTRICTIONS (NEVER INCLUDE):
+- NO romantic or adult couple imagery
+- NO teenagers or older children (child MUST be a toddler/baby)
+- NO two adults together without a toddler
+- NO text, labels, or watermarks
+- NO inappropriate content of any kind
+- This is ONLY for teaching communication to TODDLERS`,
+        image_size: "landscape_16_9",
+        num_inference_steps: 28,
+        guidance_scale: 4.0,
+        num_images: 1,
+        enable_safety_checker: true,
+        safety_tolerance: 2,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error("Flux error:", error)
+
+      const fallbackUrl = STOCK_IMAGE_FALLBACKS[word.toLowerCase()] || STOCK_IMAGE_FALLBACKS.default
+
+      return NextResponse.json({
+        imageUrl: fallbackUrl,
+        wordFunction: wordFunction,
+        fallback: true,
+        fallbackReason: "API error - using curated image",
+      })
+    }
+
+    const data = await response.json()
+
+    if (!data.images?.[0]?.url) {
+      const fallbackUrl = STOCK_IMAGE_FALLBACKS[word.toLowerCase()] || STOCK_IMAGE_FALLBACKS.default
+      return NextResponse.json({
+        imageUrl: fallbackUrl,
+        wordFunction: wordFunction,
+        fallback: true,
+        fallbackReason: "Invalid image response - using curated image",
+      })
+    }
 
     return NextResponse.json({
-      imageUrl: fallbackImage,
-      wordFunction,
-      provider: "fallback",
-      isParentChild: true,
-      error: "Using fallback image - Flux unavailable",
+      imageUrl: data.images[0].url,
+      wordFunction: wordFunction,
+      safetyChecked: true,
+      aiGenerated: true,
     })
   } catch (error) {
-    console.error("[Visual] Error:", error)
-
-    return NextResponse.json({
-      imageUrl: FALLBACK_IMAGES.default,
-      wordFunction: "teaching",
-      fallback: true,
-      isParentChild: true,
-      error: "Image generation failed",
-    })
+    console.error("Visual generation error:", error)
+    const fallbackUrl = STOCK_IMAGE_FALLBACKS.default
+    return NextResponse.json(
+      {
+        imageUrl: fallbackUrl,
+        wordFunction: "request",
+        fallback: true,
+        fallbackReason: "System error - using curated image",
+      },
+      { status: 200 },
+    )
   }
 }

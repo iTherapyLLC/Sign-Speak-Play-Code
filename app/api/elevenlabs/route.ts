@@ -4,29 +4,16 @@ export async function POST(request: Request) {
   try {
     const { text } = await request.json()
 
-    console.log("[v0] ElevenLabs API - checking environment variables")
-    console.log(
-      "[v0] Available env vars:",
-      Object.keys(process.env).filter((key) => key.includes("ELEVEN")),
-    )
+    const apiKey = process.env.ELEVENLABS_API_KEY
+    const voiceId = process.env.DEFAULT_ELEVENLABS_VOICE_ID || "woFXsAKyuJlZXRNgNAWd"
 
-    const apiKey = process.env.ELEVEN_LABS_API_KEY || process.env.ELEVENLABSAPIKEY || process.env.ELEVENLABS_API_KEY
-    const voiceId =
-      process.env.ELEVENLABSVOICEID ||
-      process.env.ELEVEN_LABS_VOICE_ID ||
-      process.env.DEFAULT_ELEVENLABS_VOICE_ID ||
-      "woFXsAKyuJlZXRNgNAWd"
-
-    console.log("[v0] API Key found:", !!apiKey)
-    console.log("[v0] Voice ID:", voiceId)
     const trimmedApiKey = apiKey?.trim()
 
     if (!trimmedApiKey) {
-      console.error("[v0] ElevenLabs API key missing - please add ELEVEN_LABS_API_KEY in project settings")
       return NextResponse.json(
         {
           error:
-            "ElevenLabs API key not configured. Please add ELEVEN_LABS_API_KEY in your project environment variables.",
+            "ElevenLabs API key not configured. Please add ELEVENLABS_API_KEY in your project environment variables.",
         },
         { status: 400 },
       )
@@ -35,8 +22,6 @@ export async function POST(request: Request) {
     if (!text) {
       return NextResponse.json({ error: "Text parameter is required" }, { status: 400 })
     }
-
-    console.log("[v0] Making ElevenLabs API request for text:", text.substring(0, 50) + "...")
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: "POST",
@@ -56,9 +41,7 @@ export async function POST(request: Request) {
     })
 
     if (!response.ok) {
-      console.error("[v0] ElevenLabs API error:", response.status, response.statusText)
       const errorText = await response.text()
-      console.error("[v0] ElevenLabs error details:", errorText)
 
       if (response.status === 401) {
         try {
@@ -81,7 +64,6 @@ export async function POST(request: Request) {
       throw new Error(`ElevenLabs API failed: ${response.status} ${response.statusText}`)
     }
 
-    console.log("[v0] ElevenLabs API request successful")
     const audioBuffer = await response.arrayBuffer()
     return new Response(audioBuffer, {
       headers: {
@@ -89,7 +71,6 @@ export async function POST(request: Request) {
       },
     })
   } catch (error) {
-    console.error("[v0] ElevenLabs route error:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Video, Mic, MicOff, Loader2 } from "lucide-react"
 
-const API_KEY = process.env.NEXT_PUBLIC_SIGNSPEAKAPIKEY || process.env.SIGNSPEAKAPIKEY
+// Replace with your actual API key
+const API_KEY = "YOUR_SIGN_SPEAK_API_KEY"
 
 export default function SignSpeakIntegration() {
   const [isRecording, setIsRecording] = useState(false)

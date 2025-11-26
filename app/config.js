@@ -1,3 +1,3 @@
 export const config = {
-  signSpeakApiKey: process.env.SIGNSPEAKAPIKEY || "",
+  signSpeakApiKey: process.env.SIGN_SPEAK_API_KEY || "",
 }

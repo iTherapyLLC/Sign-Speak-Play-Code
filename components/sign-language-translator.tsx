@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Search, Volume2, Loader2, Play, Pause } from "lucide-react"
 
-const API_KEY = process.env.NEXT_PUBLIC_SIGNSPEAKAPIKEY || process.env.SIGNSPEAKAPIKEY
+const API_KEY = "YOUR_SIGN_SPEAK_API_KEY"
 
 const QUICK_WORDS = [
   { text: "I", color: "bg-blue-100 hover:bg-blue-200" },

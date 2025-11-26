@@ -1,10 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { isInappropriate, suggestAlternative } from "@/app/lib/content-filter"
+import { validateInput } from "@/lib/content-filter"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    // Frontend sends { word: "..." } so we need to accept 'word'
     const word = body.word || body.text
 
     console.log("[v0] API request received for word:", word)
@@ -14,12 +13,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Word is required" }, { status: 400 })
     }
 
-    if (isInappropriate(word)) {
-      console.log("[v0] Blocked inappropriate word:", word)
-      return NextResponse.json({ error: suggestAlternative(word) }, { status: 400 })
+    const validation = validateInput(word)
+    if (!validation.valid) {
+      console.log("[v0] Content filter blocked word:", word)
+      return NextResponse.json(
+        {
+          error: validation.message || "Invalid input",
+          suggestions: validation.suggestions,
+        },
+        { status: 400 },
+      )
     }
 
-    const apiKey = process.env.SIGNSPEAKAPIKEY
+    const apiKey = process.env.SIGN_SPEAK_API_KEY
     console.log("[v0] API key found:", apiKey ? `Yes (${apiKey.substring(0, 8)}...)` : "No")
 
     if (!apiKey) {
@@ -35,41 +41,46 @@ export async function POST(request: NextRequest) {
     const wordLower = word.toLowerCase().trim()
     console.log("[v0] Making Sign-Speak API request for:", wordLower)
 
-    const response = await fetch("https://api.sign-speak.com/produce-sign", {
+    const response = await fetch("https://api.sign-speak.com/v1/sign", {
       method: "POST",
       headers: {
-        "X-api-key": apiKey,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        english: wordLower,
-        request_class: "BLOCKING",
-        identity: "FEMALE",
-        model_version: "SLP.2.xs",
+        word: wordLower,
+        avatar: "FEMALE",
+        format: "mp4",
       }),
     })
 
     console.log("[v0] Sign-Speak API response status (FEMALE):", response.status)
+    console.log("[v0] Sign-Speak API response headers:", Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
-      console.log("[v0] FEMALE avatar failed, trying MALE avatar fallback...")
-      const fallbackResponse = await fetch("https://api.sign-speak.com/produce-sign", {
+      const errorText = await response.text()
+      console.log("[v0] Sign-Speak API error response (FEMALE):", errorText)
+
+      // Try MALE avatar if FEMALE fails
+      console.log("[v0] Trying MALE avatar fallback...")
+      const fallbackResponse = await fetch("https://api.sign-speak.com/v1/sign", {
         method: "POST",
         headers: {
-          "X-api-key": apiKey,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          english: wordLower,
-          request_class: "BLOCKING",
-          identity: "MALE",
-          model_version: "SLP.2.xs",
+          word: wordLower,
+          avatar: "MALE",
+          format: "mp4",
         }),
       })
 
       console.log("[v0] Sign-Speak API response status (MALE):", fallbackResponse.status)
 
       if (!fallbackResponse.ok) {
+        const fallbackErrorText = await fallbackResponse.text()
+        console.log("[v0] Sign-Speak API error response (MALE):", fallbackErrorText)
         console.log("[v0] Both avatars failed for:", wordLower)
         return NextResponse.json(
           {
@@ -79,24 +90,42 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const videoBlob = await fallbackResponse.blob()
-      console.log("[v0] Video blob size (MALE):", videoBlob.size)
-      return new Response(videoBlob, {
-        headers: {
-          "Content-Type": "video/mp4",
-          "Cache-Control": "public, max-age=3600",
-        },
-      })
+      const signData = await fallbackResponse.json()
+      console.log("[v0] Sign-Speak API success response (MALE):", signData)
+      const videoUrl = signData.videoUrl || signData.url || signData.video
+
+      if (videoUrl) {
+        console.log("[v0] Fetching video from URL:", videoUrl)
+        const videoResponse = await fetch(videoUrl)
+        const videoBlob = await videoResponse.blob()
+        console.log("[v0] Video blob size:", videoBlob.size)
+        return new Response(videoBlob, {
+          headers: { "Content-Type": "video/mp4" },
+        })
+      }
     } else {
-      const videoBlob = await response.blob()
-      console.log("[v0] Video blob size (FEMALE):", videoBlob.size)
-      return new Response(videoBlob, {
-        headers: {
-          "Content-Type": "video/mp4",
-          "Cache-Control": "public, max-age=3600",
-        },
-      })
+      const signData = await response.json()
+      console.log("[v0] Sign-Speak API success response (FEMALE):", signData)
+      const videoUrl = signData.videoUrl || signData.url || signData.video
+
+      if (videoUrl) {
+        console.log("[v0] Fetching video from URL:", videoUrl)
+        const videoResponse = await fetch(videoUrl)
+        const videoBlob = await videoResponse.blob()
+        console.log("[v0] Video blob size:", videoBlob.size)
+        return new Response(videoBlob, {
+          headers: { "Content-Type": "video/mp4" },
+        })
+      }
     }
+
+    console.log("[v0] No video URL found in response")
+    return NextResponse.json(
+      {
+        error: `The sign for "${word}" isn't available right now`,
+      },
+      { status: 404 },
+    )
   } catch (error) {
     console.error("[v0] API route error:", error)
     return NextResponse.json(

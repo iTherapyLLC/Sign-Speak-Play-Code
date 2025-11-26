@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { isInappropriate, suggestAlternative } from "@/app/lib/content-filter"
+import { validateInput } from "@/lib/content-filter"
 
 const SYSTEM_PROMPT = `
 You are an SLP coach. In ≤150 words, give parent-friendly, *word-specific* guidance.
@@ -31,62 +31,6 @@ function extractFunction(analysis: string): string {
   return "request"
 }
 
-async function callGPT5(word: string) {
-  const key = process.env.OPENAI_API_KEY || process.env.OPENAIAPIKEY
-
-  console.log("[v0] Environment variable check:")
-  console.log("[v0] OPENAI_API_KEY exists:", !!process.env.OPENAI_API_KEY)
-  console.log("[v0] OPENAIAPIKEY exists:", !!process.env.OPENAIAPIKEY)
-  console.log("[v0] Final API key exists:", !!key)
-  console.log(
-    "[v0] Available env vars containing 'OPENAI':",
-    Object.keys(process.env).filter((k) => k.includes("OPENAI")),
-  )
-
-  if (!key) {
-    console.error("[v0] OpenAI API key not found in environment variables")
-    console.error("[v0] This is likely a V0 fork issue - environment variables didn't transfer properly")
-    console.error("[v0] Checked variables: OPENAI_API_KEY, OPENAIAPIKEY")
-    throw new Error("Missing OpenAI API key")
-  }
-
-  console.log(`[v0] OpenAI API key exists: ${!!key}`)
-  console.log(`[v0] OpenAI API key starts with: ${key?.substring(0, 10)}`)
-
-  const body = {
-    model: "gpt-4", // Changed from gpt-5 to gpt-4 for better availability
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `Word: "${word}"\nAudience: parents teaching an autistic or minimally verbal child with sign.`,
-      },
-    ],
-    temperature: 0.3,
-    max_tokens: 400,
-  }
-
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!r.ok) {
-    const error = await r.text()
-    console.error(`[v0] OpenAI API error: HTTP ${r.status}: ${error}`)
-    throw new Error(`OpenAI GPT-4 HTTP ${r.status}: ${error}`)
-  }
-
-  const j = await r.json()
-  const text = j?.choices?.[0]?.message?.content?.trim()
-  if (!text) throw new Error("GPT-4 returned empty")
-  return text
-}
-
 export async function POST(req: NextRequest) {
   try {
     const { word } = await req.json()
@@ -96,52 +40,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Word is required" }, { status: 400 })
     }
 
-    if (isInappropriate(normalized)) {
-      console.log("[v0] Blocked inappropriate word from analysis:", normalized)
+    const validation = validateInput(normalized)
+    if (!validation.valid) {
       return NextResponse.json(
         {
-          error: "Content not appropriate for educational analysis",
-          suggestion: suggestAlternative(normalized),
+          error: validation.message || "Invalid input",
+          suggestions: validation.suggestions,
         },
         { status: 400 },
       )
     }
 
-    const analysis = await callGPT5(normalized)
-
-    // Verify format
-    if (!/FUNCTION:/i.test(analysis) || !/CONTEXTS:/i.test(analysis)) {
-      throw new Error("GPT-4 returned unexpected format")
-    }
-
-    const communicationFunction = extractFunction(analysis)
-
-    return NextResponse.json(
-      {
-        word: normalized,
-        analysis,
-        source: "gpt-4",
-        function: communicationFunction,
-        ts: Date.now(),
-      },
-      { status: 200, headers: { "content-type": "application/json" } },
-    )
-  } catch (err: any) {
-    console.error("[v0] analyze-word GPT-4 error:", err?.message || err)
-
-    // Fallback if GPT-4 fails
-    const { word } = await req.json().catch(() => ({ word: "the word" }))
-    const w = normalizeWord(String(word || "the word"))
-
-    if (isInappropriate(w)) {
-      return NextResponse.json(
-        {
-          error: "Content not appropriate for educational analysis",
-          suggestion: suggestAlternative(w),
-        },
-        { status: 400 },
-      )
-    }
+    const w = normalized.toLowerCase()
 
     const wordAnalyses: Record<string, string> = {
       want: `FUNCTION: request — core word for expressing desires and needs.
@@ -191,16 +101,72 @@ CONTEXTS: • tickling games • rough play • overwhelming sensory input
 TIP: Stop immediately when signed, even mid-activity. This builds trust in communication power.
 
 AVOID: Continuing "just a little more" after stop - this teaches that their communication doesn't matter.`,
+
+      yes: `FUNCTION: comment — affirmation word for agreement and confirmation.
+
+CONTEXTS: • answering questions • confirming choices • expressing agreement
+
+TIP: Ask simple yes/no questions about preferred items. Model enthusiastic head nod with sign.
+
+AVOID: Only using during compliance situations - teach "yes" for genuine preferences too.`,
+
+      please: `FUNCTION: social — politeness marker for requests.
+
+CONTEXTS: • asking for snacks • requesting toys • seeking attention
+
+TIP: Model "please" naturally during your own requests. Don't require it before responding to child's needs.
+
+AVOID: Withholding items until child says "please" - this creates frustration, not politeness.`,
+
+      "thank you": `FUNCTION: social — gratitude expression for received items or help.
+
+CONTEXTS: • receiving snacks • getting help • accepting toys
+
+TIP: Model "thank you" when child gives you something. Celebrate any attempt at gratitude.
+
+AVOID: Forcing "thank you" before child can enjoy what they received - model, don't demand.`,
+
+      eat: `FUNCTION: request — food-related communication for meals.
+
+CONTEXTS: • mealtime routines • snack requests • hunger signals
+
+TIP: Show food, sign "eat," then wait. Accept any gesture toward food as communication.
+
+AVOID: Only using at scheduled mealtimes - respond to spontaneous hunger communication.`,
+
+      drink: `FUNCTION: request — beverage-related communication for hydration.
+
+CONTEXTS: • thirst signals • mealtime beverages • snack time
+
+TIP: Hold cup visible but out of reach. Sign "drink" and wait for any communication attempt.
+
+AVOID: Giving drinks on schedule only - honor spontaneous thirst communication.`,
+
+      play: `FUNCTION: request — activity initiation for engagement.
+
+CONTEXTS: • toy requests • game initiation • seeking interaction
+
+TIP: Show favorite toy, sign "play," then wait. Accept reaching, looking, or vocalizing as communication.
+
+AVOID: Starting play without waiting for child's communication - create opportunities to request.`,
+
+      good: `FUNCTION: comment — positive feedback and praise.
+
+CONTEXTS: • tasting food • completing tasks • positive experiences
+
+TIP: Model "good" with enthusiastic expression when child experiences something positive.
+
+AVOID: Overusing as empty praise - reserve for genuine positive experiences child can connect to.`,
     }
 
-    const specificFallback = wordAnalyses[w.toLowerCase()]
+    const specificFallback = wordAnalyses[w]
     const fallback =
       specificFallback ||
-      `FUNCTION: request — useful for gaining access to "${w}" or indicating preference.
+      `FUNCTION: request — useful for gaining access to "${normalized}" or indicating preference.
 
-CONTEXTS: • mealtime choices • play choices • routines that naturally include "${w}"
+CONTEXTS: • mealtime choices • play choices • routines that naturally include "${normalized}"
 
-TIP: Pause and hold the item/action for a beat, model the sign and say "${w}", then wait expectantly. Reinforce any approximation immediately.
+TIP: Pause and hold the item/action for a beat, model the sign and say "${normalized}", then wait expectantly. Reinforce any approximation immediately.
 
 AVOID: Over-prompting. If you physically shape the hands every time, the sign won't become intentional—fade prompts quickly.`
 
@@ -208,13 +174,26 @@ AVOID: Over-prompting. If you physically shape the hands every time, the sign wo
 
     return NextResponse.json(
       {
-        word: w,
+        word: normalized,
         analysis: fallback,
-        source: "fallback",
+        source: "curated",
         function: fallbackFunction,
         ts: Date.now(),
       },
       { status: 200 },
+    )
+  } catch (err: any) {
+    console.error("[analyze-word] error:", err?.message || err)
+
+    return NextResponse.json(
+      {
+        error: "Failed to analyze word",
+        word: "communication",
+        analysis: "Unable to provide analysis at this time.",
+        source: "error",
+        function: "request",
+      },
+      { status: 500 },
     )
   }
 }

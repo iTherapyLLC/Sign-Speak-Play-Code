@@ -1,4 +1,40 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { validateInput } from "@/lib/content-filter"
+
+const videoCache = new Map<string, { data: ArrayBuffer; timestamp: number }>()
+const CACHE_TTL = 60 * 60 * 1000 // 1 hour cache
+
+let lastApiCallTime = 0
+const MIN_REQUEST_INTERVAL = 3000 // 3 seconds between API calls
+
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3, baseDelay = 5000): Promise<Response> {
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options)
+
+      // If rate limited (429), wait longer and retry
+      if (response.status === 429) {
+        const retryAfter = response.headers.get("Retry-After")
+        const delay = retryAfter ? Number.parseInt(retryAfter) * 1000 : baseDelay * Math.pow(2, attempt)
+
+        console.log(`Rate limited, waiting ${delay}ms before retry ${attempt + 1}/${maxRetries}`)
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        continue
+      }
+
+      return response
+    } catch (error) {
+      lastError = error as Error
+      const delay = baseDelay * Math.pow(2, attempt)
+      console.log(`Request failed, waiting ${delay}ms before retry ${attempt + 1}/${maxRetries}`)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+
+  throw lastError || new Error("Max retries exceeded")
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,30 +45,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Word is required" }, { status: 400 })
     }
 
-    const apiKey = process.env.SIGNSPEAKAPIKEY || process.env.SIGN_SPEAK_API_KEY
+    const validation = validateInput(word)
+    if (!validation.valid) {
+      return NextResponse.json(
+        {
+          error: validation.message || "Invalid input",
+          suggestions: validation.suggestions,
+        },
+        { status: 400 },
+      )
+    }
 
-    console.log("[v0] Environment variable check:")
-    console.log("[v0] SIGNSPEAKAPIKEY exists:", !!process.env.SIGNSPEAKAPIKEY)
-    console.log("[v0] SIGN_SPEAK_API_KEY exists:", !!process.env.SIGN_SPEAK_API_KEY)
-    console.log("[v0] Final API key exists:", !!apiKey)
-    console.log(
-      "[v0] Available env vars containing 'SIGN':",
-      Object.keys(process.env).filter((k) => k.includes("SIGN")),
-    )
-
+    const apiKey = process.env.SIGN_SPEAK_API_KEY
     if (!apiKey) {
-      console.error("[v0] Sign-Speak API key not found in environment variables")
-      console.error("[v0] This is likely a V0 fork issue - environment variables didn't transfer properly")
       return NextResponse.json({ error: "API key not configured" }, { status: 500 })
     }
 
     const wordLower = word.toLowerCase().trim()
-    console.log(`[v0] Processing sign for: "${wordLower}"`)
+    const cacheKey = wordLower
 
-    console.log(`[v0] Sign-Speak API key exists: ${!!apiKey}`)
-    console.log(`[v0] Sign-Speak API key starts with: ${apiKey?.substring(0, 10)}`)
+    const cached = videoCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log(`Cache hit for "${wordLower}"`)
+      return new Response(cached.data, {
+        headers: {
+          "Content-Type": "video/mp4",
+          "Cache-Control": "public, max-age=3600",
+          "X-Cache": "HIT",
+        },
+      })
+    }
 
-    let response = await fetch("https://api.sign-speak.com/produce-sign", {
+    const now = Date.now()
+    const timeSinceLastCall = now - lastApiCallTime
+    if (timeSinceLastCall < MIN_REQUEST_INTERVAL) {
+      const waitTime = MIN_REQUEST_INTERVAL - timeSinceLastCall
+      console.log(`Throttling: waiting ${waitTime}ms before API call`)
+      await new Promise((resolve) => setTimeout(resolve, waitTime))
+    }
+    lastApiCallTime = Date.now()
+
+    console.log(`Processing sign for: "${wordLower}"`)
+
+    let response = await fetchWithRetry("https://api.sign-speak.com/produce-sign", {
       method: "POST",
       headers: {
         "X-api-key": apiKey,
@@ -41,17 +96,21 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         english: wordLower,
         request_class: "BLOCKING",
-        identity: "MALE",
+        identity: "FEMALE",
         model_version: "SLP.2.xs",
       }),
     })
 
-    console.log(`MALE avatar response: ${response.status}`)
+    console.log(`FEMALE avatar response: ${response.status}`)
 
-    if (response.status !== 200) {
-      console.log(`MALE avatar unavailable for "${wordLower}", trying FEMALE`)
+    if (response.status === 404) {
+      console.log(`FEMALE avatar unavailable for "${wordLower}", trying MALE`)
 
-      response = await fetch("https://api.sign-speak.com/produce-sign", {
+      // Wait before second request
+      await new Promise((resolve) => setTimeout(resolve, MIN_REQUEST_INTERVAL))
+      lastApiCallTime = Date.now()
+
+      response = await fetchWithRetry("https://api.sign-speak.com/produce-sign", {
         method: "POST",
         headers: {
           "X-api-key": apiKey,
@@ -60,30 +119,52 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           english: wordLower,
           request_class: "BLOCKING",
-          identity: "FEMALE",
+          identity: "MALE",
           model_version: "SLP.2.xs",
         }),
       })
 
-      console.log(`FEMALE avatar response: ${response.status}`)
+      console.log(`MALE avatar response: ${response.status}`)
     }
 
     if (response.status === 200) {
-      const blob = await response.blob()
-      console.log(`Success! Video size: ${blob.size} bytes`)
+      const arrayBuffer = await response.arrayBuffer()
+      console.log(`Success! Video size: ${arrayBuffer.byteLength} bytes`)
 
-      return new Response(blob, {
+      videoCache.set(cacheKey, { data: arrayBuffer, timestamp: Date.now() })
+
+      // Clean up old cache entries (keep max 50)
+      if (videoCache.size > 50) {
+        const oldestKey = videoCache.keys().next().value
+        if (oldestKey) videoCache.delete(oldestKey)
+      }
+
+      return new Response(arrayBuffer, {
         headers: {
           "Content-Type": "video/mp4",
           "Cache-Control": "public, max-age=3600",
+          "X-Cache": "MISS",
         },
       })
     }
 
+    if (response.status === 429) {
+      return NextResponse.json(
+        { error: "The sign service is busy. Please wait a few seconds and try again." },
+        { status: 429 },
+      )
+    }
+
     console.log(`No avatar available for "${wordLower}"`)
-    return NextResponse.json({ error: `The sign for "${word}" isn't available right now` }, { status: 404 })
+    return NextResponse.json({ error: `The sign for "${word}" isn't available yet` }, { status: 404 })
   } catch (error) {
-    console.error("[v0] Sign-Speak API error:", error)
+    console.error("Sign-Speak API error:", error)
+    if (error instanceof Error && error.message.includes("Max retries")) {
+      return NextResponse.json(
+        { error: "The sign service is busy. Please wait a few seconds and try again." },
+        { status: 429 },
+      )
+    }
     return NextResponse.json({ error: "The sign service isn't available right now" }, { status: 500 })
   }
 }

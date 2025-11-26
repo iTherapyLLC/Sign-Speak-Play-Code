@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { validateInput } from "@/lib/content-filter"
 
 const ETHNIC_GROUPS = [
   "Asian family",
@@ -23,41 +24,66 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Word and prompt are required" }, { status: 400 })
     }
 
-    const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAIAPIKEY
+    const validation = validateInput(word)
+    if (!validation.valid) {
+      console.log("[v0] Content filter blocked word:", word)
+      return NextResponse.json(
+        {
+          error: validation.message || "Invalid input",
+          suggestions: validation.suggestions,
+        },
+        { status: 400 },
+      )
+    }
+
+    const apiKey = process.env.FLUX_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 })
+      return NextResponse.json({ error: "Flux API key not configured" }, { status: 500 })
     }
 
     const diversityGroup = getDiversityRotation(word)
 
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
+    const response = await fetch("https://fal.run/fal-ai/flux-pro", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Key ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt: `${prompt}. 
+        prompt: `Professional photo-realistic image: ${prompt}
         
-        CRITICAL REQUIREMENTS:
-        - All text in images must be in English only
-        - Feature ${diversityGroup} with authentic cultural representation
-        - Ensure equal representation across different teaching scenarios`,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
+        Feature ${diversityGroup} with authentic representation.
+        
+        PHOTO-REALISTIC REQUIREMENTS:
+        - High-quality photography style
+        - Natural lighting and composition
+        - Authentic parent-child interaction
+        - Clean, family-friendly environment
+        - Professional educational context
+        
+        CRITICAL SAFETY REQUIREMENTS:
+        - Family-friendly content only
+        - Age-appropriate scenario
+        - Natural, appropriate clothing
+        - Warm, nurturing interaction
+        - No text in image`,
+        image_size: "landscape_4_3",
+        num_inference_steps: 28,
+        guidance_scale: 3.5,
+        num_images: 1,
+        enable_safety_checker: true,
+        safety_tolerance: 2,
       }),
     })
 
     if (!response.ok) {
       const errorData = await response.text()
-      console.error("OpenAI API error:", errorData)
+      console.error("Flux API error:", errorData)
       return NextResponse.json({ error: "Failed to generate image" }, { status: response.status })
     }
 
     const data = await response.json()
-    const imageUrl = data.data[0]?.url
+    const imageUrl = data.images?.[0]?.url
 
     if (!imageUrl) {
       return NextResponse.json({ error: "No image URL returned" }, { status: 500 })
