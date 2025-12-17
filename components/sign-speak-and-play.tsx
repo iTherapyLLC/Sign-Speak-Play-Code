@@ -4,7 +4,7 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Volume2, X, BookOpen, FileText, PlayCircle, Play } from "lucide-react"
+import { Volume2, X, BookOpen, FileText, PlayCircle, Play, MousePointerClick } from "lucide-react"
 import { ConversationWave } from "./anim/conversation-wave"
 import { SpeechBubbles } from "./anim/speech-bubbles"
 import { MicBars } from "./anim/mic-bars"
@@ -793,14 +793,15 @@ export default function SignSpeakAndPlay() {
 
   if (isMobile) {
     return (
-      <div className="h-screen-safe bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col overflow-hidden">
+      // Updated gradient to cyan/slate to match platform
+      <div className="h-screen-safe bg-gradient-to-br from-cyan-50 to-slate-50 flex flex-col overflow-hidden">
         <div className="flex-shrink-0 p-mobile-base text-center bg-white/80 backdrop-blur-sm border-b border-gray-200">
           <h1 className="text-mobile-2xl font-black">
-            <span className="text-blue-600">Sign</span>
+            <span className="text-cyan-500">Sign</span>
             <span className="text-gray-400">, </span>
-            <span className="text-purple-600">Speak</span>
+            <span className="text-slate-700">Speak</span>
             <span className="text-gray-400">, & </span>
-            <span className="text-pink-600">Play</span>
+            <span className="text-cyan-600">Play</span>
           </h1>
           <p className="text-mobile-sm text-gray-600 mt-1">Click buttons or type in words to see them signed</p>
         </div>
@@ -1025,11 +1026,14 @@ export default function SignSpeakAndPlay() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 p-4 flex flex-col">
+    <div className="h-screen bg-white p-4 flex flex-col">
       <div className="flex-1 flex gap-4 min-h-0">
         <div className="w-96 flex-shrink-0 flex flex-col">
           <div className="mb-4 flex-shrink-0">
-            <h1 className="text-2xl font-bold">Sign, Speak & Play</h1>
+            <h1 className="text-2xl font-bold">
+              <span className="text-cyan-500">Sign</span>, <span className="text-slate-700">Speak</span> &{" "}
+              <span className="text-cyan-600">Play</span>
+            </h1>
             <p className="text-sm text-gray-600">Click buttons or type in words to see them signed</p>
           </div>
 
@@ -1129,11 +1133,11 @@ export default function SignSpeakAndPlay() {
           <Card className="flex-1 p-4 flex flex-col min-h-0">
             {selectedWord ? (
               <>
-                <h2 className="text-2xl font-bold text-center mb-3 text-orange-600 flex-shrink-0">{selectedWord}</h2>
+                <h2 className="text-2xl font-bold text-center mb-3 text-cyan-600 flex-shrink-0">{selectedWord}</h2>
 
                 <div className="flex-1 mb-4 min-h-0">
                   {showStrategy ? (
-                    <div className="h-full bg-yellow-50 rounded-lg p-4 overflow-auto">
+                    <div className="h-full bg-gray-50 rounded-lg p-4 overflow-auto">
                       <div className="flex items-center justify-center mb-3">
                         <BookOpen className="h-5 w-5 text-orange-600 mr-2" />
                         <h3 className="font-bold text-lg">Teaching Guide</h3>
@@ -1331,7 +1335,11 @@ export default function SignSpeakAndPlay() {
             ) : (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="text-6xl mb-4">👆</div>
+                  <div className="mb-4 flex justify-center">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-100 to-cyan-200 flex items-center justify-center">
+                      <MousePointerClick className="w-8 h-8 text-cyan-500" />
+                    </div>
+                  </div>
                   <p className="text-xl text-gray-600">Click any word to see the sign</p>
                 </div>
               </div>
