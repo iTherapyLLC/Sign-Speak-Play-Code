@@ -120,6 +120,18 @@ export default function SignSpeakAndPlay() {
     }
   }, [])
 
+  const hasAutoLoaded = useRef(false)
+  useEffect(() => {
+    if (!hasAutoLoaded.current) {
+      hasAutoLoaded.current = true
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        generateSign("Want")
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
   useEffect(() => {
     if (isMobile && videoUrl && !error) {
       console.log("[v0] Auto-showing video modal on mobile for:", selectedWord)
