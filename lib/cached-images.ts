@@ -100,6 +100,42 @@ export const CACHED_TEACHING_IMAGES: Record<string, CachedImage> = {
     category: "people",
     sensitive: true,
   },
+  grandma: {
+    url: "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&q=80",
+    alt: "Grandmother with toddler",
+    category: "people",
+    sensitive: true,
+  },
+  grandpa: {
+    url: "https://images.unsplash.com/photo-1476703993599-0a1dd7228f2d?w=800&q=80",
+    alt: "Grandfather with toddler",
+    category: "people",
+    sensitive: true,
+  },
+  grandmother: {
+    url: "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&q=80",
+    alt: "Grandmother with toddler",
+    category: "people",
+    sensitive: true,
+  },
+  grandfather: {
+    url: "https://images.unsplash.com/photo-1476703993599-0a1dd7228f2d?w=800&q=80",
+    alt: "Grandfather with toddler",
+    category: "people",
+    sensitive: true,
+  },
+  nana: {
+    url: "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&q=80",
+    alt: "Grandmother with toddler",
+    category: "people",
+    sensitive: true,
+  },
+  poppy: {
+    url: "https://images.unsplash.com/photo-1476703993599-0a1dd7228f2d?w=800&q=80",
+    alt: "Grandfather with toddler",
+    category: "people",
+    sensitive: true,
+  },
 
   // ============================================
   // SAFE WORDS - Can use Flux with strict filters
@@ -484,6 +520,12 @@ export const SENSITIVE_WORDS = new Set([
   "daddy",
   "papa",
   "baby",
+  "grandma",
+  "grandpa",
+  "grandmother",
+  "grandfather",
+  "nana",
+  "poppy",
 ])
 
 /**
