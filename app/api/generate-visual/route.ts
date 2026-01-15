@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { validateInput } from "@/lib/content-filter"
+import { getCachedImage } from "@/lib/cached-images"
 
 const WORD_FUNCTIONS: Record<string, string> = {
   more: "request",
@@ -72,6 +73,18 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check for cached image first - bypass AI generation for core vocabulary
+    const cachedImage = getCachedImage(word)
+    if (cachedImage) {
+      console.log(`[v0] Using cached image for word: ${word}`)
+      return NextResponse.json({
+        imageUrl: cachedImage.url,
+        wordFunction: WORD_FUNCTIONS[word.toLowerCase()] || cachedImage.category || "request",
+        fromCache: true,
+        safetyChecked: true,
+      })
+    }
+
     const apiKey = process.env.FLUX_API_KEY
 
     if (!apiKey) {
@@ -125,12 +138,14 @@ Both showing genuine engagement and connection.
 MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
 Setting: Cozy reading area, natural daylight, bonding moment.`,
 
-      affection: `Documentary photograph: PARENT expressing love to their TODDLER (18-36 months old baby).
-Parent hugging, holding, or cuddling their small toddler child.
+      affection: `Documentary photograph: Single MOTHER or FATHER expressing love to their TODDLER CHILD (18-36 months old baby).
+Parent hugging, holding, or cuddling their small toddler child on their lap.
 Both parent and toddler smiling warmly, showing loving parent-child bond.
-MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler).
-This is PARENTAL LOVE - a mother or father with their baby child.
-Setting: Cozy living room, natural daylight, nurturing family moment.`,
+MANDATORY: Exactly ONE adult parent (age 25-40) with exactly ONE small toddler child (visibly 18-36 months).
+This is PARENTAL LOVE ONLY - a mother or father with their baby child, NOT romantic love between adults.
+NO COUPLES - this shows a single parent with their child, NOT two adults together.
+Setting: Cozy living room, natural daylight, nurturing family moment.
+CRITICAL: Family love between parent and baby only, NOT romantic adult love.`,
     }
 
     const basePrompt = improvedPrompts[wordFunction] || improvedPrompts["request"]
@@ -159,18 +174,20 @@ PHOTOGRAPHY STYLE:
 - Warm, authentic emotional connection
 
 ABSOLUTE RESTRICTIONS (NEVER INCLUDE):
-- NO romantic or adult couple imagery
-- NO teenagers or older children (child MUST be a toddler/baby)
-- NO two adults together without a toddler
+- NO romantic couples or dating imagery
+- NO two adults together (only ONE parent with ONE toddler)
+- NO adult romantic love scenes
+- NO teenagers or older children (child MUST be a toddler/baby aged 18-36 months)
+- NO beards on women, NO gender-ambiguous adults
 - NO text, labels, or watermarks
-- NO inappropriate content of any kind
-- This is ONLY for teaching communication to TODDLERS`,
+- NO inappropriate, suggestive, or adult content of any kind
+- This is STRICTLY for teaching communication to TODDLERS in a family setting`,
         image_size: "landscape_16_9",
         num_inference_steps: 28,
         guidance_scale: 4.0,
         num_images: 1,
         enable_safety_checker: true,
-        safety_tolerance: 2,
+        safety_tolerance: 1,
       }),
     })
 

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { validateInput } from "@/lib/content-filter"
+import { getCachedImage } from "@/lib/cached-images"
 
 const ETHNIC_GROUPS = [
   "Asian family",
@@ -36,6 +37,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check for cached image first - bypass AI generation for core vocabulary
+    const cachedImage = getCachedImage(word)
+    if (cachedImage) {
+      console.log(`[v0] Using cached image for word: ${word}`)
+      return NextResponse.json({
+        imageUrl: cachedImage.url,
+        fromCache: true,
+        safetyChecked: true,
+      })
+    }
+
     const apiKey = process.env.FLUX_API_KEY
     if (!apiKey) {
       return NextResponse.json({ error: "Flux API key not configured" }, { status: 500 })
@@ -51,28 +63,37 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         prompt: `Professional photo-realistic image: ${prompt}
-        
+
         Feature ${diversityGroup} with authentic representation.
-        
+
         PHOTO-REALISTIC REQUIREMENTS:
         - High-quality photography style
         - Natural lighting and composition
-        - Authentic parent-child interaction
+        - Authentic parent-child interaction (ONE parent with ONE toddler aged 18-36 months)
         - Clean, family-friendly environment
         - Professional educational context
-        
+
         CRITICAL SAFETY REQUIREMENTS:
         - Family-friendly content only
         - Age-appropriate scenario
         - Natural, appropriate clothing
         - Warm, nurturing interaction
-        - No text in image`,
+        - No text in image
+
+        ABSOLUTE RESTRICTIONS (NEVER INCLUDE):
+        - NO romantic couples or dating imagery
+        - NO two adults together (only ONE parent with ONE toddler)
+        - NO adult romantic love scenes
+        - NO teenagers or older children
+        - NO beards on women, NO gender-ambiguous adults
+        - NO inappropriate, suggestive, or adult content
+        - This is STRICTLY for teaching communication to TODDLERS`,
         image_size: "landscape_4_3",
         num_inference_steps: 28,
         guidance_scale: 3.5,
         num_images: 1,
         enable_safety_checker: true,
-        safety_tolerance: 2,
+        safety_tolerance: 1,
       }),
     })
 

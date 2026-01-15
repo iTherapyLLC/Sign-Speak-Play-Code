@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { validateInput } from "@/lib/content-filter"
+import { getCachedImage } from "@/lib/cached-images"
 
 const ETHNIC_GROUPS = [
   "Asian family",
@@ -85,7 +86,14 @@ async function generateContextualImage(
   communicationFunction: string,
   apiKey: string | undefined,
   hasValidApiKey: boolean,
-): Promise<string | null> {
+): Promise<{ url: string; fromCache: boolean } | null> {
+  // Check for cached image first - bypass AI generation for core vocabulary
+  const cachedImage = getCachedImage(word)
+  if (cachedImage) {
+    console.log(`[v0] Using cached image for word: ${word}`)
+    return { url: cachedImage.url, fromCache: true }
+  }
+
   if (!hasValidApiKey || !apiKey) {
     console.log("[v0] No Flux API key available, skipping image generation")
     return null
@@ -134,11 +142,13 @@ Setting: Clean family home, natural daylight, choice-making teaching moment.`,
 
     affection: (
       word: string,
-    ) => `Documentary photograph of a PARENT teaching a TODDLER (18-36 months old baby) to communicate "${word}".
-Scene: Living room, parent hugging or holding their small toddler child, both smiling warmly.
-Parent demonstrating love and affection in a nurturing, parental way with their baby.
-MANDATORY: One adult parent (age 25-40) with ONE small toddler child (visibly a baby/toddler, not older child).
-Setting: Clean family home, natural daylight, loving parent-child bonding moment.`,
+    ) => `Documentary photograph of a MOTHER or FATHER with their TODDLER CHILD (18-36 months old baby).
+Scene: Living room, single parent hugging or holding their small toddler child on their lap, both smiling warmly.
+This is PARENTAL LOVE ONLY - a mother or father expressing love to their baby/toddler child.
+MANDATORY SUBJECTS: Exactly ONE adult parent (age 25-40) with exactly ONE small toddler child (visibly a baby/toddler 18-36 months).
+NO COUPLES - this is a single parent with their child, NOT two adults together.
+Setting: Clean family home, natural daylight, loving parent-child bonding moment.
+CRITICAL: This must show family love between parent and baby, NOT romantic love between adults.`,
   }
 
   const promptGenerator = contextPrompts[communicationFunction] || contextPrompts.request
@@ -173,18 +183,20 @@ PHOTOGRAPHY STYLE:
 - Warm, authentic emotional connection
 
 ABSOLUTE RESTRICTIONS (NEVER INCLUDE):
-- NO romantic or adult couple imagery
-- NO teenagers or older children (child MUST be a toddler/baby)
-- NO two adults together without a toddler
+- NO romantic couples or dating imagery
+- NO two adults together (only ONE parent with ONE toddler)
+- NO adult romantic love scenes
+- NO teenagers or older children (child MUST be a toddler/baby aged 18-36 months)
+- NO beards on women, NO gender-ambiguous adults
 - NO text, labels, or watermarks
-- NO inappropriate content of any kind
-- This is ONLY for teaching communication to TODDLERS`,
+- NO inappropriate, suggestive, or adult content of any kind
+- This is STRICTLY for teaching communication to TODDLERS in a family setting`,
         image_size: "landscape_16_9",
         num_inference_steps: 28,
         guidance_scale: 4.0,
         num_images: 1,
         enable_safety_checker: true,
-        safety_tolerance: 2,
+        safety_tolerance: 1,
       }),
     })
 
@@ -198,7 +210,7 @@ ABSOLUTE RESTRICTIONS (NEVER INCLUDE):
     const imageUrl = data.images?.[0]?.url
     if (imageUrl) {
       console.log(`[v0] Image generated successfully for: ${word} with ${diversityGroup}`)
-      return imageUrl
+      return { url: imageUrl, fromCache: false }
     } else {
       console.warn(`[v0] No image URL returned for: ${word}`)
       return null
@@ -275,13 +287,13 @@ export async function POST(req: NextRequest) {
     const communicationFunction = analyzeWordFunction(word)
     console.log(`[v0] Word function: ${communicationFunction}`)
 
-    let imageUrl: string | null = null
+    let imageResult: { url: string; fromCache: boolean } | null = null
 
     try {
-      imageUrl = await generateContextualImage(word, communicationFunction, apiKey, hasValidApiKey)
+      imageResult = await generateContextualImage(word, communicationFunction, apiKey, hasValidApiKey)
     } catch (error) {
       console.error("[v0] Failed to generate contextual image:", error)
-      imageUrl = null
+      imageResult = null
     }
 
     const strategies = {
@@ -344,12 +356,13 @@ AVOID: ${strategy.avoid}`
     const response = {
       word,
       imageUrl:
-        imageUrl || `/placeholder.svg?height=400&width=600&query=Teaching+${encodeURIComponent(word)}+communication`,
+        imageResult?.url || `/placeholder.svg?height=400&width=600&query=Teaching+${encodeURIComponent(word)}+communication`,
       strategy: fullStrategy,
       communicationFunction,
-      aiGenerated: !!imageUrl,
-      fallback: !imageUrl,
-      model: imageUrl ? "flux-pro" : "fallback",
+      aiGenerated: imageResult ? !imageResult.fromCache : false,
+      fromCache: imageResult?.fromCache || false,
+      fallback: !imageResult,
+      model: imageResult ? (imageResult.fromCache ? "cached" : "flux-pro") : "fallback",
     }
 
     console.log(`[v0] Returning successful response for: ${word}`)
