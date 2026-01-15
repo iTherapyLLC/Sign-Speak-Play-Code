@@ -136,6 +136,18 @@ export const CACHED_TEACHING_IMAGES: Record<string, CachedImage> = {
     category: "people",
     sensitive: true,
   },
+  brother: {
+    url: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=800&q=80",
+    alt: "Sibling with toddler",
+    category: "people",
+    sensitive: true,
+  },
+  sister: {
+    url: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=800&q=80",
+    alt: "Sibling with toddler",
+    category: "people",
+    sensitive: true,
+  },
 
   // ============================================
   // SAFE WORDS - Can use Flux with strict filters
@@ -526,6 +538,8 @@ export const SENSITIVE_WORDS = new Set([
   "grandfather",
   "nana",
   "poppy",
+  "brother",
+  "sister",
 ])
 
 /**
