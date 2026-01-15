@@ -385,15 +385,15 @@ export default function SignSpeakAndPlay() {
       setContentFilterError("")
 
       const colors = [
-        "bg-blue-500",
-        "bg-orange-500",
-        "bg-green-500",
-        "bg-red-500",
-        "bg-purple-500",
-        "bg-pink-500",
-        "bg-yellow-500",
-        "bg-indigo-500",
-        "bg-teal-500",
+        "bg-blue-500 hover:bg-blue-600 text-white",
+        "bg-orange-500 hover:bg-orange-600 text-white",
+        "bg-green-500 hover:bg-green-600 text-white",
+        "bg-red-500 hover:bg-red-600 text-white",
+        "bg-purple-500 hover:bg-purple-600 text-white",
+        "bg-pink-500 hover:bg-pink-600 text-white",
+        "bg-yellow-500 hover:bg-yellow-600 text-white",
+        "bg-indigo-500 hover:bg-indigo-600 text-white",
+        "bg-teal-500 hover:bg-teal-600 text-white",
       ]
       const randomColor = colors[Math.floor(Math.random() * colors.length)]
 
@@ -741,15 +741,15 @@ export default function SignSpeakAndPlay() {
       setContentFilterError("")
 
       const colors = [
-        "bg-blue-500",
-        "bg-orange-500",
-        "bg-green-500",
-        "bg-red-500",
-        "bg-purple-500",
-        "bg-pink-500",
-        "bg-yellow-500",
-        "bg-indigo-500",
-        "bg-teal-500",
+        "bg-blue-500 hover:bg-blue-600 text-white",
+        "bg-orange-500 hover:bg-orange-600 text-white",
+        "bg-green-500 hover:bg-green-600 text-white",
+        "bg-red-500 hover:bg-red-600 text-white",
+        "bg-purple-500 hover:bg-purple-600 text-white",
+        "bg-pink-500 hover:bg-pink-600 text-white",
+        "bg-yellow-500 hover:bg-yellow-600 text-white",
+        "bg-indigo-500 hover:bg-indigo-600 text-white",
+        "bg-teal-500 hover:bg-teal-600 text-white",
       ]
       const randomColor = colors[Math.floor(Math.random() * colors.length)]
 
@@ -778,15 +778,15 @@ export default function SignSpeakAndPlay() {
       setContentFilterError("")
 
       const colors = [
-        "bg-blue-500",
-        "bg-orange-500",
-        "bg-green-500",
-        "bg-red-500",
-        "bg-purple-500",
-        "bg-pink-500",
-        "bg-yellow-500",
-        "bg-indigo-500",
-        "bg-teal-500",
+        "bg-blue-500 hover:bg-blue-600 text-white",
+        "bg-orange-500 hover:bg-orange-600 text-white",
+        "bg-green-500 hover:bg-green-600 text-white",
+        "bg-red-500 hover:bg-red-600 text-white",
+        "bg-purple-500 hover:bg-purple-600 text-white",
+        "bg-pink-500 hover:bg-pink-600 text-white",
+        "bg-yellow-500 hover:bg-yellow-600 text-white",
+        "bg-indigo-500 hover:bg-indigo-600 text-white",
+        "bg-teal-500 hover:bg-teal-600 text-white",
       ]
       const randomColor = colors[Math.floor(Math.random() * colors.length)]
 
