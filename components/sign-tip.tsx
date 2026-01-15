@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, AlertCircle, Hand, Eye } from "lucide-react"
+import { CheckCircle, AlertCircle, Hand, Eye, Lightbulb } from "lucide-react"
 
 interface SignTipProps {
   word: string
@@ -62,7 +62,10 @@ export function SignTip({ word }: SignTipProps) {
           <div className="flex items-start gap-3">
             <Eye className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h4 className="font-semibold text-yellow-800 mb-2">💡 Parent Tip: Accept Approximations!</h4>
+              <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                <Lightbulb className="w-4 h-4" />
+                Parent Tip: Accept Approximations!
+              </h4>
               <p className="text-sm text-yellow-700 mb-2">
                 Your child doesn't need to form the perfect sign. Any attempt to communicate "{word}" counts as success!
               </p>
@@ -85,7 +88,10 @@ export function SignTip({ word }: SignTipProps) {
         <div className="flex items-start gap-3">
           <Icon className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
-            <h4 className="font-semibold text-yellow-800 mb-2">💡 Parent Tip: Accept Approximations!</h4>
+            <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+              <Lightbulb className="w-4 h-4" />
+              Parent Tip: Accept Approximations!
+            </h4>
 
             <div className="space-y-3">
               <div>

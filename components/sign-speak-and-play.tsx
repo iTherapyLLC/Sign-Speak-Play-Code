@@ -4,7 +4,7 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Volume2, X, BookOpen, FileText, PlayCircle, Play, MousePointerClick } from "lucide-react"
+import { Volume2, X, BookOpen, FileText, PlayCircle, Play, MousePointerClick, Image } from "lucide-react"
 import { ConversationWave } from "./anim/conversation-wave"
 import { SpeechBubbles } from "./anim/speech-bubbles"
 import { MicBars } from "./anim/mic-bars"
@@ -1340,7 +1340,8 @@ export default function SignSpeakAndPlay() {
                     {showStrategy ? "Show Video" : "Teaching Guide"}
                   </Button>
                   <Button onClick={() => setShowComicStrip(true)} variant="outline" className="flex-1">
-                    📚 Visual Guide
+                    <Image className="mr-2 h-4 w-4" />
+                    Visual Guide
                   </Button>
                 </div>
               </>

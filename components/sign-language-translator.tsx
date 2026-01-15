@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Search, Volume2, Loader2, Play, Pause } from "lucide-react"
+import { Search, Volume2, Loader2, Play, Pause, Hand } from "lucide-react"
 
 const API_KEY = "YOUR_SIGN_SPEAK_API_KEY"
 
@@ -152,7 +152,11 @@ export default function SignLanguageTranslator() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-blue-600 mb-2">🤟 Sign, Speak, and Play 🤟</h1>
+          <h1 className="text-4xl font-bold text-blue-600 mb-2 flex items-center justify-center gap-3">
+            <Hand className="w-8 h-8" />
+            Sign, Speak, and Play
+            <Hand className="w-8 h-8" />
+          </h1>
           <p className="text-lg text-gray-600">Touch a word to learn the sign</p>
         </div>
 
@@ -183,7 +187,7 @@ export default function SignLanguageTranslator() {
             ) : (
               <div className="flex items-center justify-center h-full text-white">
                 <div className="text-center">
-                  <p className="text-2xl mb-2">👋</p>
+                  <Hand className="w-10 h-10 mx-auto mb-2" />
                   <p>Select a word to see the sign</p>
                 </div>
               </div>
