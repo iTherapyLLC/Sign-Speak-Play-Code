@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { validateInput } from "@/lib/content-filter"
-import { getCachedImage } from "@/lib/cached-images"
+import { getCachedImage, isSensitiveWord } from "@/lib/cached-images"
 
 const WORD_FUNCTIONS: Record<string, string> = {
   more: "request",
@@ -73,18 +73,48 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check for cached image first - bypass AI generation for core vocabulary
+    // Check sensitivity and cache
     const cachedImage = getCachedImage(word)
+    const sensitive = isSensitiveWord(word)
+
+    // SENSITIVE WORDS: Always use cache, NEVER call Flux
+    if (sensitive) {
+      if (cachedImage) {
+        console.log(`[v0] SENSITIVE word "${word}" - using cached image (Flux blocked)`)
+        return NextResponse.json({
+          imageUrl: cachedImage.url,
+          wordFunction: WORD_FUNCTIONS[word.toLowerCase()] || cachedImage.category || "request",
+          fromCache: true,
+          sensitive: true,
+          safetyChecked: true,
+        })
+      } else {
+        // Sensitive word without cache - use fallback, do NOT call Flux
+        console.warn(`[v0] SENSITIVE word "${word}" has no cached image - using fallback`)
+        const fallbackUrl = STOCK_IMAGE_FALLBACKS[word.toLowerCase()] || STOCK_IMAGE_FALLBACKS.default
+        return NextResponse.json({
+          imageUrl: fallbackUrl,
+          wordFunction: WORD_FUNCTIONS[word.toLowerCase()] || "request",
+          sensitive: true,
+          fallback: true,
+          fallbackReason: "Sensitive word - Flux generation blocked for safety",
+        })
+      }
+    }
+
+    // SAFE WORDS: Try cache first
     if (cachedImage) {
-      console.log(`[v0] Using cached image for word: ${word}`)
+      console.log(`[v0] Using cached image for safe word: ${word}`)
       return NextResponse.json({
         imageUrl: cachedImage.url,
         wordFunction: WORD_FUNCTIONS[word.toLowerCase()] || cachedImage.category || "request",
         fromCache: true,
+        sensitive: false,
         safetyChecked: true,
       })
     }
 
+    // SAFE WORDS: No cache - try Flux generation
     const apiKey = process.env.FLUX_API_KEY
 
     if (!apiKey) {
@@ -93,10 +123,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         imageUrl: fallbackUrl,
         wordFunction: WORD_FUNCTIONS[word.toLowerCase()] || "request",
+        sensitive: false,
         fallback: true,
         fallbackReason: "API key not configured",
       })
     }
+
+    console.log(`[v0] Safe word "${word}" not in cache - generating with Flux`)
 
     const wordFunction = WORD_FUNCTIONS[word.toLowerCase()] || "request"
     const diversityGroup = getDiversityRotation(word)

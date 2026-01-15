@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { validateInput } from "@/lib/content-filter"
-import { getCachedImage } from "@/lib/cached-images"
+import { getCachedImage, isSensitiveWord } from "@/lib/cached-images"
 
 const ETHNIC_GROUPS = [
   "Asian family",
@@ -37,16 +37,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check for cached image first - bypass AI generation for core vocabulary
+    // Check sensitivity and cache
     const cachedImage = getCachedImage(word)
+    const sensitive = isSensitiveWord(word)
+
+    // SENSITIVE WORDS: Always use cache, NEVER call Flux
+    if (sensitive) {
+      if (cachedImage) {
+        console.log(`[v0] SENSITIVE word "${word}" - using cached image (Flux blocked)`)
+        return NextResponse.json({
+          imageUrl: cachedImage.url,
+          fromCache: true,
+          sensitive: true,
+          safetyChecked: true,
+        })
+      } else {
+        // Sensitive word without cache - return error, do NOT call Flux
+        console.warn(`[v0] SENSITIVE word "${word}" has no cached image - blocking Flux`)
+        return NextResponse.json({
+          error: "Sensitive word requires cached image - Flux generation blocked for safety",
+          sensitive: true,
+        }, { status: 400 })
+      }
+    }
+
+    // SAFE WORDS: Try cache first
     if (cachedImage) {
-      console.log(`[v0] Using cached image for word: ${word}`)
+      console.log(`[v0] Using cached image for safe word: ${word}`)
       return NextResponse.json({
         imageUrl: cachedImage.url,
         fromCache: true,
+        sensitive: false,
         safetyChecked: true,
       })
     }
+
+    // SAFE WORDS: No cache - try Flux generation
+    console.log(`[v0] Safe word "${word}" not in cache - generating with Flux`)
 
     const apiKey = process.env.FLUX_API_KEY
     if (!apiKey) {

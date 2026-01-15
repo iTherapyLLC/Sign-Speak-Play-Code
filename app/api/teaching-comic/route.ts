@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { validateInput } from "@/lib/content-filter"
-import { getCachedImage } from "@/lib/cached-images"
+import { getCachedImage, isSensitiveWord } from "@/lib/cached-images"
 
 const ETHNIC_GROUPS = [
   "Asian family",
@@ -86,18 +86,36 @@ async function generateContextualImage(
   communicationFunction: string,
   apiKey: string | undefined,
   hasValidApiKey: boolean,
-): Promise<{ url: string; fromCache: boolean } | null> {
-  // Check for cached image first - bypass AI generation for core vocabulary
+): Promise<{ url: string; fromCache: boolean; sensitive: boolean } | null> {
+  // Check for cached image first
   const cachedImage = getCachedImage(word)
-  if (cachedImage) {
-    console.log(`[v0] Using cached image for word: ${word}`)
-    return { url: cachedImage.url, fromCache: true }
+  const sensitive = isSensitiveWord(word)
+
+  // SENSITIVE WORDS: Always use cache, NEVER call Flux (risk of inappropriate generation)
+  if (sensitive) {
+    if (cachedImage) {
+      console.log(`[v0] SENSITIVE word "${word}" - using cached image (Flux blocked)`)
+      return { url: cachedImage.url, fromCache: true, sensitive: true }
+    } else {
+      // Sensitive word without cache - return null, do NOT call Flux
+      console.warn(`[v0] SENSITIVE word "${word}" has no cached image - blocking Flux generation`)
+      return null
+    }
   }
 
+  // SAFE WORDS: Try cache first, allow Flux fallback
+  if (cachedImage) {
+    console.log(`[v0] Using cached image for safe word: ${word}`)
+    return { url: cachedImage.url, fromCache: true, sensitive: false }
+  }
+
+  // No cache for safe word - try Flux generation
   if (!hasValidApiKey || !apiKey) {
     console.log("[v0] No Flux API key available, skipping image generation")
     return null
   }
+
+  console.log(`[v0] Safe word "${word}" not in cache - generating with Flux`)
 
   const contextPrompts: Record<string, (word: string) => string> = {
     request: (
@@ -210,7 +228,7 @@ ABSOLUTE RESTRICTIONS (NEVER INCLUDE):
     const imageUrl = data.images?.[0]?.url
     if (imageUrl) {
       console.log(`[v0] Image generated successfully for: ${word} with ${diversityGroup}`)
-      return { url: imageUrl, fromCache: false }
+      return { url: imageUrl, fromCache: false, sensitive: false }
     } else {
       console.warn(`[v0] No image URL returned for: ${word}`)
       return null
@@ -287,7 +305,7 @@ export async function POST(req: NextRequest) {
     const communicationFunction = analyzeWordFunction(word)
     console.log(`[v0] Word function: ${communicationFunction}`)
 
-    let imageResult: { url: string; fromCache: boolean } | null = null
+    let imageResult: { url: string; fromCache: boolean; sensitive: boolean } | null = null
 
     try {
       imageResult = await generateContextualImage(word, communicationFunction, apiKey, hasValidApiKey)
@@ -361,6 +379,7 @@ AVOID: ${strategy.avoid}`
       communicationFunction,
       aiGenerated: imageResult ? !imageResult.fromCache : false,
       fromCache: imageResult?.fromCache || false,
+      sensitive: imageResult?.sensitive || isSensitiveWord(word),
       fallback: !imageResult,
       model: imageResult ? (imageResult.fromCache ? "cached" : "flux-pro") : "fallback",
     }
