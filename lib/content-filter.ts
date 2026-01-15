@@ -2,10 +2,17 @@
  * Content Filter for Sign Language Teaching App
  *
  * This filter protects children by blocking inappropriate words across all app features.
- * Categories blocked: profanity, sexual content, violence, drugs, hate speech, weapons
+ * Uses word-boundary matching to only block standalone profanities, not substrings.
+ *
+ * Examples:
+ * - "fuck" -> blocked (standalone profanity)
+ * - "hello" -> allowed (contains "hell" but is a different word)
+ * - "cockatoo" -> allowed (contains "cock" but is a different word)
+ * - "shitake" -> allowed (contains "shit" but is a different word)
  */
 
-// Comprehensive blocklist of inappropriate words
+// Blocklist of inappropriate standalone words (free morphemes)
+// These are only blocked when they appear as complete words, not as substrings
 const BLOCKED_WORDS = new Set([
   // Profanity
   "fuck",
@@ -13,37 +20,28 @@ const BLOCKED_WORDS = new Set([
   "fucked",
   "fucker",
   "fucks",
-  "fuk",
-  "f u c k",
-  "f@ck",
-  "f*ck",
   "shit",
   "shitting",
   "shitty",
   "shits",
-  "sh!t",
-  "sh*t",
   "ass",
   "asshole",
-  "asses",
-  "a$$",
   "bitch",
   "bitches",
   "bitching",
-  "b!tch",
-  "b*tch",
+  "bastard",
+  "bastards",
   "damn",
   "damned",
   "dammit",
   "hell",
-  "hells",
   "crap",
   "crappy",
   "piss",
   "pissed",
   "pissing",
-  "bastard",
-  "bastards",
+  "cunt",
+  "cunts",
 
   // Sexual content
   "sex",
@@ -52,10 +50,10 @@ const BLOCKED_WORDS = new Set([
   "penis",
   "vagina",
   "dick",
+  "dicks",
   "cock",
+  "cocks",
   "pussy",
-  "breast",
-  "breasts",
   "boob",
   "boobs",
   "tit",
@@ -65,13 +63,15 @@ const BLOCKED_WORDS = new Set([
   "porn",
   "pornography",
   "rape",
+  "raped",
+  "raping",
+  "rapist",
   "molest",
   "molestation",
   "orgasm",
   "masturbate",
   "masturbation",
   "erotic",
-  "arousal",
 
   // Violence
   "kill",
@@ -81,33 +81,6 @@ const BLOCKED_WORDS = new Set([
   "murder",
   "murderer",
   "murdered",
-  "shoot",
-  "shooting",
-  "shot",
-  "stab",
-  "stabbing",
-  "stabbed",
-  "attack",
-  "attacking",
-  "attacked",
-  "fight",
-  "fighting",
-  "beat",
-  "beating",
-  "punch",
-  "punching",
-  "kick",
-  "kicking",
-  "slap",
-  "slapping",
-  "blood",
-  "bloody",
-  "bleed",
-  "bleeding",
-  "die",
-  "dying",
-  "dead",
-  "death",
   "suicide",
   "suicidal",
   "torture",
@@ -117,97 +90,57 @@ const BLOCKED_WORDS = new Set([
   "guns",
   "rifle",
   "pistol",
-  "knife",
-  "knives",
-  "blade",
   "bomb",
   "bombs",
-  "explosive",
-  "weapon",
-  "weapons",
   "grenade",
 
   // Drugs
-  "drug",
-  "drugs",
   "cocaine",
   "heroin",
   "meth",
-  "marijuana",
-  "weed",
-  "alcohol",
-  "beer",
-  "wine",
-  "vodka",
-  "whiskey",
-  "drunk",
-  "cigarette",
-  "tobacco",
-  "addict",
 
   // Hate speech
-  "hate",
-  "hating",
-  "hated",
   "racist",
   "racism",
   "nazi",
   "nazis",
   "terrorist",
 
-  // Other inappropriate
-  "stupid",
-  "idiot",
-  "dumb",
-  "moron",
+  // Slurs
   "retard",
   "retarded",
-  "ugly",
-  "suck",
-  "sucks",
-  "sucking",
 ])
 
 /**
  * Check if a word or phrase is inappropriate for children
  * Returns true if the content should be blocked
+ *
+ * Uses word-boundary matching: only blocks when a blocked word appears
+ * as a standalone word, not as a substring of another word.
  */
 export function isInappropriate(text: string): boolean {
   if (!text || typeof text !== "string") {
     return true // Block empty/invalid input
   }
 
-  // Normalize: lowercase, remove extra spaces, remove special characters used to bypass filters
-  const normalized = text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s]/g, "") // Remove special chars like @, *, !
-    .replace(/\s+/g, " ") // Normalize spaces
-
-  // Check if the exact word/phrase is blocked
-  if (BLOCKED_WORDS.has(normalized)) {
+  const trimmed = text.trim()
+  if (trimmed.length === 0) {
     return true
   }
 
-  // Check if any blocked word appears in the text
-  const words = normalized.split(/\s+/)
+  // Normalize: lowercase and split into words
+  // This naturally handles word boundaries - "hello" is one word, not "hell" + "o"
+  const normalized = trimmed.toLowerCase()
+
+  // Split on whitespace and common word separators to get individual words
+  const words = normalized.split(/[\s\-_]+/)
+
+  // Check each word against the blocklist
   for (const word of words) {
-    if (BLOCKED_WORDS.has(word)) {
-      return true
-    }
-  }
+    // Clean the word of punctuation but preserve the core word
+    const cleanWord = word.replace(/[^a-z0-9]/g, "")
 
-  // Check for partial matches (e.g., "fucking" contains "fuck")
-  for (const blockedWord of BLOCKED_WORDS) {
-    if (normalized.includes(blockedWord)) {
-      return true
-    }
-  }
-
-  // Check for character-separated attempts to bypass (e.g., "f u c k")
-  const noSpaces = normalized.replace(/\s/g, "")
-  for (const blockedWord of BLOCKED_WORDS) {
-    if (noSpaces.includes(blockedWord.replace(/\s/g, ""))) {
+    if (BLOCKED_WORDS.has(cleanWord)) {
       return true
     }
   }
